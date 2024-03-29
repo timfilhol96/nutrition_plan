@@ -10,6 +10,7 @@ tqdm = "*"
 numpy = "*"
 bs4 = "*"
 streamlit = "*"
+black = "*"
 
 [dev-packages]
 ipykernel = "*"
