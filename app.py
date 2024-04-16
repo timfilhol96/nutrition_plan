@@ -104,10 +104,12 @@ st.markdown(
             # Menu"""
 )
 
-nb_meals = ste.number_input("Select number of daily meals", min_value=1, step=1, value=3)
+nb_meals = ste.number_input(
+    "Select number of daily meals", min_value=1, step=1, value=3
+)
 
 meal_columns = st.columns(nb_meals)
-df = pd.DataFrame(data={"Ingredient": ["",'']})
+df = pd.DataFrame(data={"Ingredient": ["", ""]})
 meals = {}
 for i, col in enumerate(meal_columns):
     meal_name = col.selectbox(
@@ -204,13 +206,12 @@ if st.button("Get macros 🍽️"):
             delta_color="normal",
         )
 
-    regrouped_csv = ''
+    regrouped_csv = ""
     for meal, macro_df in macros.items():
         if macro_df is not None:
-            regrouped_csv+= f'\n{meal},,,,,\n\n{convert_df(macro_df, index=False)}'
-    regrouped_csv+=f'\n\n{convert_df(total_df.iloc[-3:], index=True)}'
+            regrouped_csv += f"\n{meal},,,,,\n\n{convert_df(macro_df, index=False)}"
+    regrouped_csv += f"\n\n{convert_df(total_df.iloc[-3:], index=True)}"
 
-    ste.download_button('Download my menu 😋',
-                    regrouped_csv,
-                    'my_macros.csv',
-                    mime = 'csv')
+    ste.download_button(
+        "Download my menu 😋", regrouped_csv, "my_macros.csv", mime="csv"
+    )

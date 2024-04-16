@@ -6,13 +6,8 @@ name = "pypi"
 [packages]
 requests = "*"
 pandas = "*"
-tqdm = "*"
-numpy = "*"
-bs4 = "*"
 streamlit = "*"
 black = "*"
-matplotlib = "*"
-fpdf = "*"
 streamlit-ext = "*"
 
 [dev-packages]
