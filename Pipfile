@@ -11,6 +11,9 @@ numpy = "*"
 bs4 = "*"
 streamlit = "*"
 black = "*"
+matplotlib = "*"
+fpdf = "*"
+streamlit-ext = "*"
 
 [dev-packages]
 ipykernel = "*"

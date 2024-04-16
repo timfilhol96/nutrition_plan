@@ -1,6 +1,6 @@
 # 🦖 Nutrition plan - ZTH 🦖
 
-This is a convenient tool for those following a nutrition plan 💪.
+This is a convenient tool to count your daily macros and calories to meet your fitness goals 💪.
 
 This app runs with nutritionix API. You will need to create your [API](https://developer.nutritionix.com/admin) keys (it's free 😉).
 

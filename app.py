@@ -1,16 +1,13 @@
-# Clean my food json
-# verify if all ingredients are in grams (especially liquids)
-# add tbspoon and tspoon options or equivalent in grams
+# TODO: custom db?
+# TODO: possibility to set default meals
 # pre-fill based on previous menus
-
-# link grocery stores to approximate a weekly shopping basket
+# add custom products (specific sauce and whatnot)
 
 import streamlit as st
+import streamlit_ext as ste
 import os
-import requests
 import pandas as pd
-import numpy as np
-import random
+from utils import api_call, convert_df, get_macros
 
 ############
 my_maintenance_macros = {
@@ -19,36 +16,15 @@ my_maintenance_macros = {
     "proteins": 110,
     "fats": 69,
 }
-api_id = os.environ["NIX_APP_ID"]
-api_key = os.environ["NIX_API_KEY"]
-url = "https://trackapi.nutritionix.com/v2/natural/nutrients"
 
-
-@st.cache_data
-def api_call(url, headers, query):
-    return requests.request("POST", url, headers=headers, data=query)
-
-
-def get_macros(response, quantity):
-    dict_ = response.json()["foods"][0]
-
-    def cross_prod(a):
-        return round(a * quantity / dict_["serving_weight_grams"])
-
-    return {
-        "Ingredient": dict_["food_name"],
-        "kcal": cross_prod(dict_["nf_calories"]),
-        "Carbohydrates": cross_prod(dict_["nf_total_carbohydrate"]),
-        "Proteins": cross_prod(dict_["nf_protein"]),
-        "Fats": cross_prod(dict_["nf_total_fat"]),
-        "Quantity (g)": cross_prod(dict_["serving_weight_grams"]),
-    }
-
+API_ID = os.environ["NIX_APP_ID"]
+API_KEY = os.environ["NIX_API_KEY"]
+URL = "https://trackapi.nutritionix.com/v2/natural/nutrients"
 
 headers = {
     "Content-Type": "application/x-www-form-urlencoded",
-    "x-app-id": api_id,
-    "x-app-key": api_key,
+    "x-app-id": API_ID,
+    "x-app-key": API_KEY,
     "x-remote-user-id": "0",
 }
 
@@ -62,21 +38,32 @@ st.set_page_config(
     # menu_items={
     #     'Get Help': 'https://www.extremelycoolapp.com/help',
     #     'Report a bug': "https://www.extremelycoolapp.com/bug",
-    #     'About': "# This is a header. This is an *extremely* cool app!"
+    #     'About': "# "
     # }
 )  # collapsed
 
-# st.sidebar.write("# Navigation") # to create a sidebar
-
-st.markdown(
+st.sidebar.write(
     """
-            # 🦖 Nutrition plan - ZTH 🦖
+# Macros Calculator
+---
+## Tutorial
+- Enter your daily kcal and macros intake
+- Create your daily meals by listing all the ingredients and quantities
+- Get your macros
+- You can easily adjust the quantities of any ingredient to fine-tune your meal plans and exactly hit your daily macros👌
+- Download your menu as a csv file
+---
 
-            ## Daily Macros
+This app was made using [streamlit](https://streamlit.io/) and [Nutritionix](https://www.nutritionix.com/).
+                 """
+)
+st.columns(3)[1].header("Nutrition plan - ZTH 🦖")
+st.markdown(
+    """     ## Daily Macros
             """
 )
 ################################### MACROS ############################################
-calories = st.selectbox(
+calories = ste.selectbox(
     "Choose a calorie plan:",
     ("Maintenance", "Cut (-300 kcal)", "Extra cut (-500 kcal)"),
 )
@@ -117,10 +104,10 @@ st.markdown(
             # Menu"""
 )
 
-nb_meals = st.number_input("Select number of daily meals", min_value=1, step=1)
+nb_meals = ste.number_input("Select number of daily meals", min_value=1, step=1, value=3)
 
 meal_columns = st.columns(nb_meals)
-df = pd.DataFrame(columns=["Ingredient", "Quantity"])
+df = pd.DataFrame(data={"Ingredient": ["",'']})
 meals = {}
 for i, col in enumerate(meal_columns):
     meal_name = col.selectbox(
@@ -128,29 +115,24 @@ for i, col in enumerate(meal_columns):
     )
     meal_df = col.data_editor(
         df.copy(),
-        column_config={
-            "Quantity": st.column_config.NumberColumn(
-                "Quantity (g)", default=100, format="%.2f g"
-            )
-        },
         key=i + 0.01,
         num_rows="dynamic",
         hide_index=True,
+        use_container_width=True,
     )
     meals[meal_name] = meal_df
 
 
 def generate_macro_table(edited_df):
     if edited_df.shape[0] != 0:
-        foods = edited_df["Ingredient"].values
-        quantities = edited_df["Quantity"].values
+        ingredients = edited_df["Ingredient"].values
         macros = []
-        for food, quantity in zip(foods, quantities):
-            query = {"query": food}
-            macros.append(get_macros(api_call(url, headers, query), quantity))
+        for ingredient in ingredients:
+            query = {"query": ingredient}
+            macros.append(get_macros(api_call(URL, headers, query)))
 
         df = pd.DataFrame.from_records(macros)
-        df.loc["Total"] = df.sum()
+        df.loc["Total"] = df.iloc[:, 2:].sum()
         df.loc[df.index[-1], "Ingredient"] = "Total"
         return df
     return None
@@ -173,10 +155,9 @@ if st.button("Get macros 🍽️"):
             col.dataframe(macro_df, hide_index=True)
 
     if any(el is not None for el in list(macros.values())):
-        # st.markdown("## TOTAL")
         total_df = pd.DataFrame(
             data=[
-                df.loc[df.index[-1], df.columns[1:-1]]
+                df.loc[df.index[-1], df.columns[2:]]
                 for df in list(macros.values())
                 if df is not None
             ],
@@ -190,30 +171,46 @@ if st.button("Get macros 🍽️"):
             total_df.loc[total_df.index[-2], "Proteins"] - daily_proteins,
             total_df.loc[total_df.index[-2], "Fats"] - daily_fats,
         ]
-        # st.dataframe(total_df)
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Ideal kcal", f"{daily_kcal} kcal")
+        col2.metric("Ideal Carbohydrates", f"{daily_carbs} g")
+        col3.metric("Ideal Proteins", f"{daily_proteins} g")
+        col4.metric("Ideal Fats", f"{daily_fats} g")
 
         col1, col2, col3, col4 = st.columns(4)
         col1.metric(
             "Total kcal",
-            f"{total_df.loc['Total'][0]} kcal",
-            f"{total_df.loc['Diff'][0]} kcal",
-            delta_color="off",
+            f"{round(total_df.loc['Total'][0])} kcal",
+            f"{round(total_df.loc['Diff'][0])} kcal",
+            delta_color="normal",
         )
         col2.metric(
             "Total Carbohydrates",
-            f"{total_df.loc['Total'][1]} g",
-            f"{total_df.loc['Diff'][1]} g",
-            delta_color="off",
+            f"{round(total_df.loc['Total'][1])} g",
+            f"{round(total_df.loc['Diff'][1])} g",
+            delta_color="normal",
         )
         col3.metric(
             "Total Proteins",
-            f"{total_df.loc['Total'][2]} g",
-            f"{total_df.loc['Diff'][2]} g",
-            delta_color="off",
+            f"{round(total_df.loc['Total'][2])} g",
+            f"{round(total_df.loc['Diff'][2])} g",
+            delta_color="normal",
         )
         col4.metric(
             "Total Fats",
-            f"{total_df.loc['Total'][3]} g",
-            f"{total_df.loc['Diff'][3]} g",
-            delta_color="off",
+            f"{round(total_df.loc['Total'][3])} g",
+            f"{round(total_df.loc['Diff'][3])} g",
+            delta_color="normal",
         )
+
+    regrouped_csv = ''
+    for meal, macro_df in macros.items():
+        if macro_df is not None:
+            regrouped_csv+= f'\n{meal},,,,,\n\n{convert_df(macro_df, index=False)}'
+    regrouped_csv+=f'\n\n{convert_df(total_df.iloc[-3:], index=True)}'
+
+    ste.download_button('Download my menu 😋',
+                    regrouped_csv,
+                    'my_macros.csv',
+                    mime = 'csv')
