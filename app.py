@@ -43,7 +43,7 @@ headers = {
 #######################
 
 st.set_page_config(
-    page_title="Macros calculator",  # => Quick reference - Streamlit
+    page_title="Nutrition Plan",  # => Quick reference - Streamlit
     page_icon="🦖",
     layout="wide",  # wide
     initial_sidebar_state="auto",
@@ -65,11 +65,13 @@ with st.sidebar:
 
 ---
 This app was made using [streamlit](https://streamlit.io/) and [Nutritionix](https://www.nutritionix.com/).
+
+---
+Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
+
+---
                  """
     )
-    # st.columns(3)[0].image(
-    #     "https://raptorcoaching.pro/cdn/shop/files/Logo-RCP-Transparent-Gold.png?v=1677057628&width=685",
-    #     width=200)
 
 st.columns(3)[1].markdown(
     """
