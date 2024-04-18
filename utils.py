@@ -2,7 +2,7 @@ import requests
 import streamlit as st
 
 
-@st.cache_data
+@st.cache_data(show_spinner="Generating macros..⏳")
 def api_call(url, headers, query):
     return requests.request("POST", url, headers=headers, data=query)
 

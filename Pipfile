@@ -9,6 +9,7 @@ pandas = "*"
 streamlit = "*"
 black = "*"
 streamlit-ext = "*"
+numpy = "*"
 
 [dev-packages]
 ipykernel = "*"
