@@ -1,15 +1,6 @@
-# TODO: custom db?
-# TODO: possibility to set default meals (import csv file?)
-# TODO: breakfast, lunch and snack by default
+# TODO: set default meals (import csv file?)
 # TODO: keep macros while modifying old menu
-# pre-fill based on previous menus
-
-# [theme]
-# primaryColor="#080808"
-# backgroundColor="#080808"
-# secondaryBackgroundColor="#CE9E5E"
-# textColor="#faf7f7"
-# font="san serif"
+# TODO: pre-fill based on previous menus
 
 # white = #faf7f7
 # black = #080808
@@ -150,9 +141,6 @@ for i, col in enumerate(meal_columns):
         )
         meals[f"{meal_name} #{i}"] = meal_df
 
-if len(meals) < nb_meals:  # TODO: remove if only 1 meal left
-    nb_meals = len(meals)
-
 
 def generate_macro_table(edited_df):
     if edited_df.shape[0] != 0:
@@ -176,6 +164,7 @@ if st.button("GET MACROS", use_container_width=True):
 
     if all(el is None for el in list(macros.values())):
         st.error("Please fill in at least 1 table 🦖")
+        st.stop()
 
     macro_columns = st.columns(nb_meals)
     for col, (meal, macro_df) in zip(macro_columns, macros.items()):

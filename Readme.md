@@ -1,4 +1,4 @@
-# MACROS CALCULATOR
+# NUTRITION PLAN
 
 App link: https://nutrition-plan.streamlit.app/
 
