@@ -154,6 +154,8 @@ def generate_macro_table(edited_df):
         df = pd.DataFrame.from_records(macros)
         df.loc["TOTAL"] = df.iloc[:, 3:].sum()
         df.loc[df.index[-1], "Ingredient"] = "TOTAL"
+        df.loc[df.index[-1], "Serving weight (g)"] = ""
+        df.loc[df.index[-1], "Food name"] = ""
         return df
     return None
 
