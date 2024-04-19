@@ -11,10 +11,10 @@ def convert_df(df, **kwargs):
     return df.to_csv(**kwargs)
 
 
-def get_macros(response):
+def get_macros(response, query):
     dict_ = response.json()["foods"][0]
     return {
-        "Ingredient": dict_["food_name"],
+        "Ingredient": query['query'],
         "Serving weight (g)": dict_["serving_weight_grams"],
         "kcal": round(dict_["nf_calories"]),
         "Carbohydrates": round(dict_["nf_total_carbohydrate"]),
