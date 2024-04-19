@@ -152,7 +152,7 @@ def generate_macro_table(edited_df):
                 macros.append(get_macros(api_call(URL, headers, query), query))
 
         df = pd.DataFrame.from_records(macros)
-        df.loc["TOTAL"] = df.iloc[:, 2:].sum()
+        df.loc["TOTAL"] = df.iloc[:, 3:].sum()
         df.loc[df.index[-1], "Ingredient"] = "TOTAL"
         return df
     return None
