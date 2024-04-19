@@ -120,7 +120,7 @@ nb_meals = ste.number_input(
 )
 
 meal_columns = st.columns(nb_meals)
-df = pd.DataFrame(data = {"Ingredient": ["" for i in range(15)]})
+df = pd.DataFrame(data={"Ingredient": ["" for i in range(15)]})
 meals = {}
 for i, col in enumerate(meal_columns):
     meal_name = col.selectbox(
@@ -149,7 +149,7 @@ def generate_macro_table(edited_df):
         for ingredient in ingredients:
             if ingredient is not "":
                 query = {"query": ingredient}
-                macros.append(get_macros(api_call(URL, headers, query),query))
+                macros.append(get_macros(api_call(URL, headers, query), query))
 
         df = pd.DataFrame.from_records(macros)
         df.loc["TOTAL"] = df.iloc[:, 2:].sum()
@@ -178,7 +178,7 @@ if st.button("GET MACROS", use_container_width=True):
     if any(el is not None for el in list(macros.values())):
         total_df = pd.DataFrame(
             data=[
-                df.loc[df.index[-1], df.columns[2:]]
+                df.loc[df.index[-1], df.columns[3:]]
                 for df in list(macros.values())
                 if df is not None
             ],

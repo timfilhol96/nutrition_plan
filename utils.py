@@ -14,8 +14,9 @@ def convert_df(df, **kwargs):
 def get_macros(response, query):
     dict_ = response.json()["foods"][0]
     return {
-        "Ingredient": query['query'],
+        "Ingredient": query["query"],
         "Serving weight (g)": dict_["serving_weight_grams"],
+        "Food name": dict_["food_name"],
         "kcal": round(dict_["nf_calories"]),
         "Carbohydrates": round(dict_["nf_total_carbohydrate"]),
         "Proteins": round(dict_["nf_protein"]),
