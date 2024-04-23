@@ -1,6 +1,6 @@
 # NUTRITION PLAN
 
-App link: https://nutrition-plan.streamlit.app/
+App link (🇬🇧/🇫🇷): https://nutrition-plan.streamlit.app/
 
 ## TUTORIAL
 - Enter your daily kcal and macros intake

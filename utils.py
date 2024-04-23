@@ -8,13 +8,13 @@ def api_call(url, headers, query):
 
 
 def convert_df(df, **kwargs):
-    return df.to_csv(**kwargs)
+    return df.to_csv(**kwargs).encode("utf-8-sig")
 
 
 def get_macros(response, query):
     dict_ = response.json()["foods"][0]
     return {
-        "Ingredient": query["query"],
+        "Ingredient": query,
         "Serving weight (g)": dict_["serving_weight_grams"],
         "Food name": dict_["food_name"],
         "kcal": round(dict_["nf_calories"]),

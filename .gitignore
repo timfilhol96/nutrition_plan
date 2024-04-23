@@ -2,3 +2,4 @@ scraping.ipynb
 Pipfile.lock
 default.json
 __pycache__/*
+.streamlit/*
