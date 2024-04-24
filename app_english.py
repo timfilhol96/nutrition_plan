@@ -117,7 +117,7 @@ def run_english_app(my_maintenance_macros, URL, headers):
             for ingredient in ingredients:
                 if ingredient != "":
                     query = {"query": ingredient}
-                    macros.append(get_macros(api_call(URL, headers, query), query))
+                    macros.append(get_macros(api_call(URL, headers, query), ingredient))
 
             df = pd.DataFrame.from_records(macros)
             df.loc["TOTAL"] = df.iloc[:, 3:].sum()
