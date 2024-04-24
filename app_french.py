@@ -234,7 +234,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
         st.download_button(
             "TELECHARGEZ VOTRE MENU",
             regrouped_csv,
-            "my_macros.csv",
+            "menu.csv",
             mime="csv",
             use_container_width=True,
         )

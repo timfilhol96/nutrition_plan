@@ -8,7 +8,7 @@ def api_call(url, headers, query):
 
 
 def convert_df(df, **kwargs):
-    return df.to_csv(**kwargs).encode("utf-8-sig")
+    return df.to_csv(**kwargs)
 
 
 def get_macros(response, query):

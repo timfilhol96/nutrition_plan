@@ -211,7 +211,7 @@ def run_english_app(my_maintenance_macros, URL, headers):
         st.download_button(
             "DOWNLOAD MENU",
             regrouped_csv,
-            "my_macros.csv",
+            "menu.csv",
             mime="csv",
             use_container_width=True,
         )
