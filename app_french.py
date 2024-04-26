@@ -40,7 +40,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
     st.markdown(
         """
         ---
-        ## MACROS JOURNALIERES
+        ## MACROS JOURNALIERS
                 """
     )  ################################### MACROS ############################################
     calories = ste.selectbox(
