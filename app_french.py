@@ -23,7 +23,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
     - Obtenez **17%** de réduction sur tout achat avec mon code promotionnel : **TIFI96V0yNLM**
 
     ---
-    Cette application a été créée grâce à [streamlit](https://streamlit.io/) et [Nutritionix](https://www.nutritionix.com/).
+    Cette application a été créée par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) grâce à [streamlit](https://streamlit.io/) et [Nutritionix](https://www.nutritionix.com/).
 
     ---
     Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)

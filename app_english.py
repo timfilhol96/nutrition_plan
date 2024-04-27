@@ -21,7 +21,7 @@ def run_english_app(my_maintenance_macros, URL, headers):
     - Get **17%** off on any purchase with my promo code: **TIFI96V0yNLM**
 
     ---
-    This app was made using [streamlit](https://streamlit.io/) and [Nutritionix](https://www.nutritionix.com/).
+    This app was made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) using [streamlit](https://streamlit.io/) and [Nutritionix](https://www.nutritionix.com/).
 
     ---
     Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
