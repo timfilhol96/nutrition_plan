@@ -78,7 +78,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
         "Protéines journalières (g)", value=my_maintenance_macros["proteins"]
     )
     daily_fats = columns[3].number_input(
-        "Matières grasses journalières (g)", value=my_maintenance_macros["fats"]
+        "Lipides journaliers (g)", value=my_maintenance_macros["fats"]
     )
 
     #####################################################################################
@@ -125,7 +125,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
                 "kcal": "Calories",
                 "Carbohydrates": "Glucides",
                 "Proteins": "Protéines",
-                "Fats": "Matières grasses",
+                "Fats": "Lipides",
             }
         )
 
@@ -187,7 +187,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
                 total_df.loc[total_df.index[-2], "Calories"] - daily_kcal,
                 total_df.loc[total_df.index[-2], "Glucides"] - daily_carbs,
                 total_df.loc[total_df.index[-2], "Protéines"] - daily_proteins,
-                total_df.loc[total_df.index[-2], "Matières grasses"] - daily_fats,
+                total_df.loc[total_df.index[-2], "Lipides"] - daily_fats,
             ]
 
             col1, col2, col3, col4 = st.columns(4)
@@ -210,7 +210,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
                 delta_color="normal",
             )
             col4.metric(
-                "Total Matières grasses",
+                "Total Lipides",
                 f"{round(total_df.loc['TOTAL'][3])} g",
                 f"{round(total_df.loc['DIFF'][3])} g",
                 delta_color="normal",
@@ -222,7 +222,7 @@ def run_french_app(my_maintenance_macros, URL, headers):
             col1.metric("Idéal Calories", f"{daily_kcal} kcal")
             col2.metric("Idéal Glucides", f"{daily_carbs} g")
             col3.metric("Idéal Protéines", f"{daily_proteins} g")
-            col4.metric("Idéal Matières grasses (g)", f"{daily_fats} g")
+            col4.metric("Idéal Lipides (g)", f"{daily_fats} g")
 
         regrouped_csv = ""
         for meal, macro_df in macros.items():
