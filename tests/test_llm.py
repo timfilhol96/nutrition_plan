@@ -125,3 +125,37 @@ def test_openai_compatible_provider_request_and_status_mapping():
     with patch("nutrition.llm.httpx.post", side_effect=httpx.ReadTimeout("slow")):
         with pytest.raises(ProviderTimeout):
             provider.complete_json("s", "u")
+
+
+def test_provider_errors_include_the_response_message():
+    provider = OpenAICompatibleProvider("groq", "https://x/v1", "KEY", "gone-model")
+    body = {
+        "error": {
+            "message": "The model `gone-model` does not exist",
+            "code": "model_not_found",
+        }
+    }
+    with patch("nutrition.llm.httpx.post", return_value=_response(404, body)):
+        with pytest.raises(ProviderError) as exc:
+            provider.complete_json("s", "u")
+    assert "HTTP 404 (The model `gone-model` does not exist)" in str(exc.value)
+
+    with patch(
+        "nutrition.llm.httpx.post", return_value=_response(429, {"error": "slow down"})
+    ):
+        with pytest.raises(RateLimited) as exc:
+            provider.complete_json("s", "u")
+    assert "slow down" in str(exc.value)
+
+
+def test_list_models():
+    provider = OpenAICompatibleProvider("groq", "https://x/v1", "KEY", "m")
+    payload = {"data": [{"id": "b-model"}, {"id": "a-model"}]}
+    with patch("nutrition.llm.httpx.get", return_value=_response(200, payload)) as get:
+        assert provider.list_models() == ["a-model", "b-model"]
+    assert get.call_args.args[0] == "https://x/v1/models"
+    with patch(
+        "nutrition.llm.httpx.get", return_value=_response(401, {"error": "bad key"})
+    ):
+        with pytest.raises(ProviderError):
+            provider.list_models()

@@ -2,6 +2,7 @@
 
 Run it by hand only (it is outside pytest's testpaths and makes network calls):
 
+    python eval/parser_eval.py --probe        # check keys and model availability first
     python eval/parser_eval.py                # all cases, LLM + USDA matching
     python eval/parser_eval.py --no-usda      # LLM only, skips match accuracy
     python eval/parser_eval.py --lang fr --limit 10
@@ -40,7 +41,7 @@ def key(name: str) -> str | None:
     return os.environ.get(name) or secret(name)
 
 
-def build_chain() -> ProviderChain:
+def build_providers() -> list[OpenAICompatibleProvider]:
     providers = []
     if key("GROQ_API_KEY"):
         providers.append(
@@ -63,7 +64,38 @@ def build_chain() -> ProviderChain:
     if not providers:
         sys.exit("No LLM key found (GROQ_API_KEY / OPENROUTER_API_KEY).")
     print("Providers:", ", ".join(f"{p.name} ({p.model})" for p in providers))
-    return ProviderChain(providers, cooldowns={})
+    return providers
+
+
+def probe(providers: list[OpenAICompatibleProvider]) -> None:
+    """Show whether each configured model is available to the configured key."""
+    for provider in providers:
+        try:
+            models = provider.list_models()
+        except ProviderError as exc:
+            print(f"- {provider.name}: cannot list models: {exc}")
+            continue
+        status = "available" if provider.model in models else "NOT FOUND"
+        print(f"- {provider.name}: {provider.model} is {status} ({len(models)} models)")
+        if provider.model not in models:
+            hint = [m for m in models if "llama" in m or "gemma" in m or ":free" in m][
+                :15
+            ]
+            print("  some options:", ", ".join(hint) or ", ".join(models[:15]))
+
+
+def parse_waiting_for_cooldowns(parser: MealParser, chain: ProviderChain, text, lang):
+    """Run one parse; if every provider was only cooling down, wait and retry once."""
+    try:
+        return parser.parse([text], lang)
+    except LLMUnavailable as exc:
+        pending = [until for until in chain.cooldowns.values() if until > time.time()]
+        if "cooling down" not in str(exc) or not pending:
+            raise
+        wait = max(pending) - time.time() + 1
+        print(f"  (rate limited, waiting {wait:.0f}s for the cooldown)")
+        time.sleep(wait)
+        return parser.parse([text], lang)
 
 
 def load_cases(path: Path, lang: str | None, limit: int | None) -> list[dict]:
@@ -82,11 +114,19 @@ def main() -> None:
     args.add_argument("--limit", type=int)
     args.add_argument("--no-usda", action="store_true", help="skip USDA matching")
     args.add_argument(
-        "--sleep", type=float, default=0.5, help="pause between LLM calls"
+        "--sleep", type=float, default=1.0, help="pause between LLM calls"
+    )
+    args.add_argument(
+        "--probe", action="store_true", help="only check model availability"
     )
     opts = args.parse_args()
 
-    parser = MealParser(build_chain())
+    providers = build_providers()
+    if opts.probe:
+        probe(providers)
+        return
+    chain = ProviderChain(providers, cooldowns={})
+    parser = MealParser(chain)
     usda = None
     if not opts.no_usda:
         if not key("FDC_API_KEY"):
@@ -102,7 +142,7 @@ def main() -> None:
     for case in cases:
         text, expected = case["text"], case["expected"]
         try:
-            result = parser.parse([text], case["lang"])
+            result = parse_waiting_for_cooldowns(parser, chain, text, case["lang"])
             items = [item for item in result.items if item.row == 1]
         except (ParseFailed, LLMUnavailable) as exc:
             items = []

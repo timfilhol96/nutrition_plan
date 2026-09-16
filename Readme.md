@@ -87,6 +87,7 @@ black --check .
 units, raw vs cooked, brands, multi-food lines, ambiguous portions).
 
 ```bash
+python eval/parser_eval.py --probe      # first: are the configured models available to your keys?
 python eval/parser_eval.py              # uses env vars or .streamlit/secrets.toml
 python eval/parser_eval.py --no-usda    # LLM only
 python eval/parser_eval.py --lang fr --limit 10

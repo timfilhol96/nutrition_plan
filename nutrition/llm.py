@@ -39,6 +39,17 @@ class LLMProvider(Protocol):
         ...
 
 
+def error_detail(response: httpx.Response) -> str:
+    """Short human-readable reason from an error response body."""
+    try:
+        error = response.json().get("error")
+        message = error.get("message") if isinstance(error, dict) else error
+    except ValueError:
+        message = response.text
+    message = " ".join(str(message or "").split())
+    return f"HTTP {response.status_code}" + (f" ({message[:160]})" if message else "")
+
+
 class OpenAICompatibleProvider:
     def __init__(
         self,
@@ -79,14 +90,25 @@ class OpenAICompatibleProvider:
         except httpx.HTTPError as exc:
             raise ProviderError(f"{self.name}: {exc}") from exc
         if response.status_code == 429:
-            raise RateLimited(f"{self.name}: rate limited")
+            raise RateLimited(f"{self.name}: rate limited, {error_detail(response)}")
         if response.status_code != 200:
-            raise ProviderError(f"{self.name}: HTTP {response.status_code}")
+            raise ProviderError(f"{self.name}: {error_detail(response)}")
         try:
             content = response.json()["choices"][0]["message"]["content"]
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             raise ProviderError(f"{self.name}: malformed response") from exc
         return content or ""
+
+    def list_models(self) -> list[str]:
+        """IDs of the models this key can use (GET /models). Used by the eval probe."""
+        response = httpx.get(
+            f"{self.base_url}/models",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            timeout=self.timeout_s,
+        )
+        if response.status_code != 200:
+            raise ProviderError(f"{self.name}: {error_detail(response)}")
+        return sorted(model["id"] for model in response.json().get("data", []))
 
 
 def extract_json(text: str) -> str:
