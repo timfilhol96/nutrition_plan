@@ -1,0 +1,44 @@
+{"lang": "en", "text": "2 eggs", "expected": [{"grams": 100, "keyword": "egg"}], "tags": ["count"]}
+{"lang": "en", "text": "1 slice of whole wheat toast", "expected": [{"grams": 30, "keyword": "bread"}], "tags": ["household"]}
+{"lang": "en", "text": "150g cooked white rice", "expected": [{"grams": 150, "keyword": "cooked"}], "tags": ["cooked"]}
+{"lang": "en", "text": "100g raw chicken breast", "expected": [{"grams": 100, "keyword": "raw"}], "tags": ["raw"]}
+{"lang": "en", "text": "1 tbsp olive oil", "expected": [{"grams": 14, "keyword": "olive"}], "tags": ["household"]}
+{"lang": "en", "text": "a medium banana", "expected": [{"grams": 120, "keyword": "banana"}], "tags": ["household"]}
+{"lang": "en", "text": "200ml semi-skimmed milk", "expected": [{"grams": 206, "keyword": "milk"}], "tags": ["household"]}
+{"lang": "en", "text": "2 eggs and a slice of toast with butter", "expected": [{"grams": 100, "keyword": "egg"}, {"grams": 30, "keyword": "bread"}, {"grams": 7, "keyword": "butter"}], "tags": ["multi"]}
+{"lang": "en", "text": "1 cup of cooked oatmeal", "expected": [{"grams": 234, "keyword": "oat"}], "tags": ["household", "cooked"]}
+{"lang": "en", "text": "30g whey protein powder", "expected": [{"grams": 30, "keyword": "whey"}], "tags": ["brand"]}
+{"lang": "en", "text": "1 can of tuna in water, drained", "expected": [{"grams": 120, "keyword": "tuna"}], "tags": ["household"]}
+{"lang": "en", "text": "a handful of almonds", "expected": [{"grams": 28, "keyword": "almond"}], "tags": ["ambiguous"]}
+{"lang": "en", "text": "1 Big Mac", "expected": [{"grams": 219, "keyword": "big mac"}], "tags": ["brand"]}
+{"lang": "en", "text": "2 tbsp Nutella", "expected": [{"grams": 37, "keyword": "hazelnut"}], "tags": ["brand", "household"]}
+{"lang": "en", "text": "half an avocado", "expected": [{"grams": 100, "keyword": "avocado"}], "tags": ["household"]}
+{"lang": "en", "text": "1 medium apple", "expected": [{"grams": 180, "keyword": "apple"}], "tags": ["household"]}
+{"lang": "en", "text": "100g pasta", "expected": [{"grams": 100, "keyword": "pasta"}], "tags": ["ambiguous", "raw"]}
+{"lang": "en", "text": "100g cooked pasta", "expected": [{"grams": 100, "keyword": "cooked"}], "tags": ["cooked"]}
+{"lang": "en", "text": "3 oz grilled salmon", "expected": [{"grams": 85, "keyword": "salmon"}], "tags": ["household", "cooked"]}
+{"lang": "en", "text": "1 cup of greek yogurt", "expected": [{"grams": 245, "keyword": "yogurt"}], "tags": ["household"]}
+{"lang": "en", "text": "2 tablespoons peanut butter", "expected": [{"grams": 32, "keyword": "peanut"}], "tags": ["household"]}
+{"lang": "en", "text": "a bowl of cereal with milk", "expected": [{"grams": 30, "keyword": "cereal"}, {"grams": 125, "keyword": "milk"}], "tags": ["ambiguous", "multi"]}
+{"lang": "fr", "text": "2 œufs", "expected": [{"grams": 100, "keyword": "egg"}], "tags": ["count"]}
+{"lang": "fr", "text": "une tranche de pain complet", "expected": [{"grams": 30, "keyword": "bread"}], "tags": ["household"]}
+{"lang": "fr", "text": "150 g de riz cuit", "expected": [{"grams": 150, "keyword": "cooked"}], "tags": ["cooked"]}
+{"lang": "fr", "text": "100 g de riz cru", "expected": [{"grams": 100, "keyword": "raw"}], "tags": ["raw"]}
+{"lang": "fr", "text": "1 cuillère à soupe d'huile d'olive", "expected": [{"grams": 14, "keyword": "olive"}], "tags": ["household"]}
+{"lang": "fr", "text": "une banane", "expected": [{"grams": 120, "keyword": "banana"}], "tags": ["household"]}
+{"lang": "fr", "text": "un verre de lait demi-écrémé", "expected": [{"grams": 206, "keyword": "milk"}], "tags": ["household"]}
+{"lang": "fr", "text": "2 œufs et une tranche de pain avec du beurre", "expected": [{"grams": 100, "keyword": "egg"}, {"grams": 30, "keyword": "bread"}, {"grams": 7, "keyword": "butter"}], "tags": ["multi"]}
+{"lang": "fr", "text": "un bol de flocons d'avoine", "expected": [{"grams": 40, "keyword": "oat"}], "tags": ["household", "ambiguous"]}
+{"lang": "fr", "text": "1 boîte de thon au naturel égoutté", "expected": [{"grams": 120, "keyword": "tuna"}], "tags": ["household"]}
+{"lang": "fr", "text": "une poignée d'amandes", "expected": [{"grams": 28, "keyword": "almond"}], "tags": ["ambiguous"]}
+{"lang": "fr", "text": "1 yaourt nature", "expected": [{"grams": 125, "keyword": "yogurt"}], "tags": ["household"]}
+{"lang": "fr", "text": "150 g de blanc de poulet grillé", "expected": [{"grams": 150, "keyword": "chicken"}], "tags": ["cooked"]}
+{"lang": "fr", "text": "100 g de pâtes", "expected": [{"grams": 100, "keyword": "pasta"}], "tags": ["ambiguous", "raw"]}
+{"lang": "fr", "text": "1 c. à café de sucre", "expected": [{"grams": 4, "keyword": "sugar"}], "tags": ["household"]}
+{"lang": "fr", "text": "un demi avocat", "expected": [{"grams": 100, "keyword": "avocado"}], "tags": ["household"]}
+{"lang": "fr", "text": "2 carrés de chocolat noir", "expected": [{"grams": 20, "keyword": "chocolate"}], "tags": ["household", "ambiguous"]}
+{"lang": "fr", "text": "1 pomme", "expected": [{"grams": 180, "keyword": "apple"}], "tags": ["household"]}
+{"lang": "fr", "text": "une assiette de lentilles cuites", "expected": [{"grams": 200, "keyword": "lentil"}], "tags": ["ambiguous", "cooked"]}
+{"lang": "fr", "text": "1 Kinder Bueno", "expected": [{"grams": 43, "keyword": "chocolate"}], "tags": ["brand"]}
+{"lang": "fr", "text": "une cuillère à soupe de miel", "expected": [{"grams": 21, "keyword": "honey"}], "tags": ["household"]}
+{"lang": "fr", "text": "100 g de saumon cru", "expected": [{"grams": 100, "keyword": "raw"}], "tags": ["raw"]}

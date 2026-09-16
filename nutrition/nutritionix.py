@@ -1,8 +1,11 @@
-"""NutritionClient backed by the Nutritionix natural-language endpoint.
+"""DEPRECATED: NutritionClient backed by the Nutritionix natural-language endpoint.
 
-TODO(phase 3): Nutritionix only understands English. French input is sent
-untranslated until the LLM + USDA pipeline replaces this client.
+The Nutritionix free tier has been discontinued. nutrition.hybrid.HybridClient
+(free LLM parser + USDA FoodData Central) is the default client. This module is
+kept for reference only and will be removed. It sends French input untranslated.
 """
+
+import warnings
 
 import requests
 import streamlit as st
@@ -54,6 +57,11 @@ def parse_food(food: dict, source: str) -> FoodItem:
 
 class NutritionixClient:
     def __init__(self, app_id: str, app_key: str):
+        warnings.warn(
+            "NutritionixClient is deprecated; use nutrition.hybrid.HybridClient",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.app_id = app_id
         self.app_key = app_key
 

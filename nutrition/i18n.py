@@ -18,7 +18,7 @@ STRINGS = {
 - Get **17%** off on any purchase with my promo code: **TIFI96V0yNLM**
 
 ---
-This app was made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) using [streamlit](https://streamlit.io/) and [Nutritionix](https://www.nutritionix.com/).
+This app was made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) using [streamlit](https://streamlit.io/) and [USDA FoodData Central](https://fdc.nal.usda.gov/).
 
 ---
 Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
@@ -26,8 +26,42 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
 ---
 """,
         "missing_secrets": (
-            "Missing Nutritionix credentials: set `NIX_APP_ID` and `NIX_API_KEY` "
-            "in `.streamlit/secrets.toml` (or the app's secrets on Streamlit Cloud)."
+            "Missing USDA credentials: set `FDC_API_KEY` in `.streamlit/secrets.toml` "
+            "(or the app's secrets on Streamlit Cloud). Get a free key at "
+            "https://fdc.nal.usda.gov/api-key-signup."
+        ),
+        "manual_mode": "Manual mode",
+        "manual_mode_help": "Search USDA foods yourself instead of typing free text.",
+        "no_llm_configured": (
+            "No AI provider is configured (`GROQ_API_KEY` / `OPENROUTER_API_KEY`), "
+            "so only manual mode is available."
+        ),
+        "llm_unavailable_info": (
+            "The AI parser is unavailable right now ({reason}). "
+            "Switched to manual mode: search each food and enter its weight."
+        ),
+        "cap_reached_info": (
+            "This session has used its {cap} AI parsing calls. "
+            "Switched to manual mode: search each food and enter its weight."
+        ),
+        "row_too_long": "Row {row} is {length} characters long; please keep rows under {max}.",
+        "too_many_rows": "A meal has {count} rows; please keep it under {max}.",
+        "parse_failed_meal": (
+            "The AI could not read this meal. Search the foods manually below."
+        ),
+        "usda_error": "USDA FoodData Central is unreachable right now. Please retry.",
+        "not_found": "No USDA match",
+        "search_food": "Search a USDA food",
+        "no_results": "No results",
+        "match": "USDA match",
+        "text": "Your text",
+        "add": "Add",
+        "remove": "Remove",
+        "meal_total": "Meal total",
+        "footer": (
+            "Ingredient text is sent to a third-party AI provider (Groq, with "
+            "OpenRouter as fallback) for parsing only. Nutrition data comes from "
+            "USDA FoodData Central."
         ),
         "daily_macros": "DAILY MACROS",
         "plan": "Choose a calorie plan:",
@@ -80,7 +114,7 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
 - Obtenez **17%** de réduction sur tout achat avec mon code promotionnel : **TIFI96V0yNLM**
 
 ---
-Cette application a été créée par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) grâce à [streamlit](https://streamlit.io/) et [Nutritionix](https://www.nutritionix.com/).
+Cette application a été créée par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) grâce à [streamlit](https://streamlit.io/) et [USDA FoodData Central](https://fdc.nal.usda.gov/).
 
 ---
 Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
@@ -88,9 +122,42 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
 ---
 """,
         "missing_secrets": (
-            "Identifiants Nutritionix manquants : définissez `NIX_APP_ID` et "
-            "`NIX_API_KEY` dans `.streamlit/secrets.toml` (ou dans les secrets "
-            "de l'application sur Streamlit Cloud)."
+            "Identifiant USDA manquant : définissez `FDC_API_KEY` dans "
+            "`.streamlit/secrets.toml` (ou dans les secrets de l'application sur "
+            "Streamlit Cloud). Clé gratuite sur https://fdc.nal.usda.gov/api-key-signup."
+        ),
+        "manual_mode": "Mode manuel",
+        "manual_mode_help": "Cherchez vous-même les aliments USDA au lieu de saisir du texte libre.",
+        "no_llm_configured": (
+            "Aucun fournisseur d'IA n'est configuré (`GROQ_API_KEY` / "
+            "`OPENROUTER_API_KEY`) : seul le mode manuel est disponible."
+        ),
+        "llm_unavailable_info": (
+            "L'analyse par IA est indisponible pour le moment ({reason}). "
+            "Passage en mode manuel : cherchez chaque aliment et saisissez son poids."
+        ),
+        "cap_reached_info": (
+            "Cette session a utilisé ses {cap} analyses par IA. "
+            "Passage en mode manuel : cherchez chaque aliment et saisissez son poids."
+        ),
+        "row_too_long": "La ligne {row} fait {length} caractères ; limitez-vous à {max}.",
+        "too_many_rows": "Un repas contient {count} lignes ; limitez-vous à {max}.",
+        "parse_failed_meal": (
+            "L'IA n'a pas pu lire ce repas. Cherchez les aliments manuellement ci-dessous."
+        ),
+        "usda_error": "USDA FoodData Central est injoignable pour le moment. Réessayez.",
+        "not_found": "Aucune correspondance USDA",
+        "search_food": "Chercher un aliment USDA",
+        "no_results": "Aucun résultat",
+        "match": "Correspondance USDA",
+        "text": "Votre texte",
+        "add": "Ajouter",
+        "remove": "Retirer",
+        "meal_total": "Total du repas",
+        "footer": (
+            "Le texte des ingrédients est envoyé à un fournisseur d'IA tiers (Groq, "
+            "puis OpenRouter en secours) uniquement pour l'analyse. Les données "
+            "nutritionnelles proviennent de USDA FoodData Central."
         ),
         "daily_macros": "MACROS JOURNALIERS",
         "plan": "Choisissez un plan calorique :",

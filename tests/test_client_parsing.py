@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
 import requests
 
 from nutrition.client import NutritionLookupError
