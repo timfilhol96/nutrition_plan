@@ -46,7 +46,7 @@ OUTPUT: only a JSON object with this exact shape, nothing else:
 RULES
 - Every row that describes food must appear at least once. A row with several foods ("2 eggs and toast") yields one item per food, all with that row number.
 - name_en: a short English food name.
-- usda_query: a USDA-style descriptor, e.g. "chicken, broilers or fryers, breast, meat only, cooked, roasted" or "rice, white, long-grain, regular, cooked".
+- usda_query: 1 to 4 search keywords that all appear in the USDA FoodData Central description of that food, main food noun first, e.g. "honey", "chicken breast roasted", "rice white cooked", "blueberries frozen unsweetened". Do NOT write full USDA names, filler words ("regular", "or", "salad") or brand names; every word you give must match, so fewer precise words beat many.
 - grams: the edible weight in grams as a number. Convert household units and counts (1 egg = 50 g, 1 slice of bread = 30 g, 1 tbsp / 1 cuillère à soupe of oil = 14 g, 1 tsp / 1 cuillère à café = 5 g, 1 medium banana = 120 g, 1 medium apple = 180 g, 200 ml of milk = 206 g).
 - Keep the cooking state exactly as stated (raw/cru, cooked/cuit, grilled/grillé, roasted/rôti, boiled/bouilli). When it is not stated, choose the most likely state and say so in assumption. Rice, pasta and legumes are raw unless "cooked"/"cuit" is stated.
 - assumption: a short note for any guess (default portion, raw vs cooked, a brand approximated by a generic food), otherwise null.
@@ -62,18 +62,18 @@ Rows:
 2: un bol de flocons d'avoine avec 200 ml de lait demi-écrémé
 Answer:
 {"items": [
- {"row": 1, "name_en": "olive oil", "usda_query": "oil, olive, salad or cooking", "grams": 28, "assumption": null},
- {"row": 2, "name_en": "oats", "usda_query": "cereals, oats, regular and quick, not fortified, dry", "grams": 40, "assumption": "un bol = 40 g de flocons secs"},
- {"row": 2, "name_en": "semi-skimmed milk", "usda_query": "milk, reduced fat, fluid, 2% milkfat", "grams": 206, "assumption": null}
+ {"row": 1, "name_en": "olive oil", "usda_query": "oil olive", "grams": 28, "assumption": null},
+ {"row": 2, "name_en": "oats", "usda_query": "oats dry", "grams": 40, "assumption": "un bol = 40 g de flocons secs"},
+ {"row": 2, "name_en": "semi-skimmed milk", "usda_query": "milk 2% milkfat", "grams": 206, "assumption": null}
 ]}
 
 Rows:
 1: 2 eggs and a slice of toast with butter
 Answer:
 {"items": [
- {"row": 1, "name_en": "egg", "usda_query": "egg, whole, cooked, fried", "grams": 100, "assumption": "eggs assumed fried"},
- {"row": 1, "name_en": "toast", "usda_query": "bread, white, commercially prepared, toasted", "grams": 30, "assumption": null},
- {"row": 1, "name_en": "butter", "usda_query": "butter, salted", "grams": 7, "assumption": "1 tsp of butter assumed"}
+ {"row": 1, "name_en": "egg", "usda_query": "egg whole fried", "grams": 100, "assumption": "eggs assumed fried"},
+ {"row": 1, "name_en": "toast", "usda_query": "bread white toasted", "grams": 30, "assumption": null},
+ {"row": 1, "name_en": "butter", "usda_query": "butter salted", "grams": 7, "assumption": "1 tsp of butter assumed"}
 ]}
 
 Rows:
@@ -81,8 +81,8 @@ Rows:
 2: 150 g de poulet
 Answer:
 {"items": [
- {"row": 1, "name_en": "cooked basmati rice", "usda_query": "rice, white, long-grain, regular, cooked", "grams": 100, "assumption": null},
- {"row": 2, "name_en": "chicken breast", "usda_query": "chicken, broilers or fryers, breast, meat only, cooked, roasted", "grams": 150, "assumption": "poulet = blanc de poulet cuit, supposé"}
+ {"row": 1, "name_en": "cooked basmati rice", "usda_query": "rice white cooked", "grams": 100, "assumption": null},
+ {"row": 2, "name_en": "chicken breast", "usda_query": "chicken breast roasted", "grams": 150, "assumption": "poulet = blanc de poulet cuit, supposé"}
 ]}
 """
 

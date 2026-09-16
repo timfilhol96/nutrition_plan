@@ -4,6 +4,7 @@ No test in this suite performs a network call.
 """
 
 import json
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -72,9 +73,16 @@ CATALOGUE = {
 }
 
 
+def _words(text):
+    return set(re.findall(r"[a-zà-ÿ0-9%]+", text.lower()))
+
+
 def fake_usda_get(url, params=None, timeout=None):
     query = params["query"].lower()
     foods = [food for keyword, food in CATALOGUE.items() if keyword in query]
+    if params.get("requireAllWords") == "true":
+        # Like FDC: only foods whose description contains every query word.
+        foods = [f for f in foods if _words(query) <= _words(f["description"])]
     response = MagicMock()
     response.status_code = 200
     response.json.return_value = {"foods": foods[: params.get("pageSize", 5)]}

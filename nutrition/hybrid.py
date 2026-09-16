@@ -43,9 +43,7 @@ class HybridClient:
         parsed = self.parser.parse(rows, lang)
         items = []
         for item in parsed.items:
-            candidates = self.usda.search(item.usda_query, self.k)
-            if not candidates:
-                candidates = self.usda.search(item.name_en, self.k)
+            candidates = self.find_candidates(item.usda_query, item.name_en)
             items.append(
                 ResolvedItem(
                     row=item.row,
@@ -59,6 +57,25 @@ class HybridClient:
             )
         failed = [(number, rows[number - 1]) for number in parsed.failed_rows]
         return ResolvedMeal(items=items, failed_rows=failed)
+
+    def find_candidates(self, usda_query: str, name_en: str) -> list[UsdaCandidate]:
+        """Precise searches first (every word must match), then looser ones."""
+        attempts = [
+            (usda_query, True),
+            (name_en, True),
+            (name_en, False),
+            (usda_query, False),
+        ]
+        tried = set()
+        for query, require_all in attempts:
+            key = (query.strip().lower(), require_all)
+            if key in tried or not query.strip():
+                continue
+            tried.add(key)
+            candidates = self.usda.search(query, self.k, require_all=require_all)
+            if candidates:
+                return candidates
+        return []
 
     def lookup(self, text: str, lang: str) -> list[FoodItem]:
         """NutritionClient protocol: resolve one line with its best matches."""

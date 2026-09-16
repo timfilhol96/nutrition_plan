@@ -82,7 +82,9 @@ def parse_candidate(food: dict) -> UsdaCandidate:
 
 
 @st.cache_data(ttl=CACHE_TTL_S, show_spinner=False)
-def _search_cached(api_key: str, query: str, k: int) -> list[UsdaCandidate]:
+def _search_cached(
+    api_key: str, query: str, k: int, require_all: bool
+) -> list[UsdaCandidate]:
     # Raises on failure so that failures are never cached.
     params = {
         "query": query,
@@ -90,6 +92,11 @@ def _search_cached(api_key: str, query: str, k: int) -> list[UsdaCandidate]:
         "pageSize": k,
         "api_key": api_key,
     }
+    if require_all:
+        # FDC search is OR-based and ranks by term frequency, so a query that
+        # is not a real description matches on filler words. Requiring every
+        # word turns it into a precision gate: exact hits or nothing.
+        params["requireAllWords"] = "true"
     try:
         response = httpx.get(SEARCH_URL, params=params, timeout=TIMEOUT_S)
     except httpx.HTTPError as exc:
@@ -103,8 +110,10 @@ class UsdaClient:
     def __init__(self, api_key: str):
         self.api_key = api_key
 
-    def search(self, query: str, k: int = 5) -> list[UsdaCandidate]:
+    def search(
+        self, query: str, k: int = 5, require_all: bool = False
+    ) -> list[UsdaCandidate]:
         query = " ".join(query.split())
         if not query:
             return []
-        return _search_cached(self.api_key, query, k)
+        return _search_cached(self.api_key, query, k, require_all)

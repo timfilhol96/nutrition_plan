@@ -40,16 +40,35 @@ def test_resolve_meal_matches_each_item_and_falls_back_to_name_en():
     assert meal.items[0].candidates[0].fdc_id == 1001
     assert meal.items[2].candidates[0].description.startswith("Rice")
     assert not meal.items[3].found
-    queries = [call.kwargs["params"]["query"] for call in get.call_args_list]
-    assert queries == [
-        "egg, whole, cooked, fried",
-        "bread, white, toasted",
-        "nonsense usda descriptor",
-        "rice",
-        "nonsense",
-        "kale",
+    calls = [
+        (
+            c.kwargs["params"]["query"],
+            c.kwargs["params"].get("requireAllWords") == "true",
+        )
+        for c in get.call_args_list
+    ]
+    assert calls == [
+        ("egg, whole, cooked, fried", True),  # exact descriptor: one precise hit
+        ("bread, white, toasted", True),
+        ("nonsense usda descriptor", True),  # nothing -> name_en, all words
+        ("rice", True),
+        ("nonsense", True),  # the full ladder for a food that does not exist
+        ("kale", True),
+        ("kale", False),
+        ("nonsense", False),
     ]
     assert meal.failed_rows == []
+
+
+def test_precise_search_beats_loose_search_on_a_partial_descriptor():
+    # "chicken breast raw" is not in the catalogue verbatim: the all-words
+    # search fails and the ladder moves on to name_en (all words), which hits.
+    client, _ = make_client(items_json((1, "chicken", "chicken breast raw", 100)))
+    with patch("nutrition.usda.httpx.get", side_effect=fake_usda_get) as get:
+        meal = client.resolve_meal(["100g raw chicken"], "en")
+    assert meal.items[0].candidates[0].description.startswith("Chicken")
+    flags = [c.kwargs["params"].get("requireAllWords") for c in get.call_args_list]
+    assert flags == ["true", "true"]
 
 
 def test_failed_rows_carry_their_text():

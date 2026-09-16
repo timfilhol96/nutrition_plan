@@ -116,3 +116,11 @@ def test_parse_candidate():
         }
     )
     assert candidate.fdc_id == 7 and candidate.per_100g["kcal"] == 717
+
+
+def test_require_all_words_is_passed_through():
+    with patch("nutrition.usda.httpx.get", side_effect=fake_usda_get) as get:
+        UsdaClient("KEY").search("egg fried", require_all=True)
+        UsdaClient("KEY").search("egg fried")
+    flags = [c.kwargs["params"].get("requireAllWords") for c in get.call_args_list]
+    assert flags == ["true", None]
