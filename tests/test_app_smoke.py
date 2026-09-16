@@ -48,6 +48,12 @@ def patch_llm(llm):
     )
 
 
+def qp(at, key):
+    """AppTest exposes query params as lists."""
+    value = at.query_params[key]
+    return value[0] if isinstance(value, list) else value
+
+
 def make_app(**session_state):
     at = AppTest.from_file(APP, default_timeout=30)
     at.secrets["FDC_API_KEY"] = "fdc"
@@ -57,11 +63,11 @@ def make_app(**session_state):
     return at
 
 
-def editor_stub(frames):
-    def fake_editor(self, data, key, **kwargs):
-        return frames.get(key, data)
-
-    return fake_editor
+def patch_editor(frames):
+    """AppTest cannot drive st.data_editor: return canned frames by widget key."""
+    return patch(
+        "streamlit.data_editor", lambda data, key, **kwargs: frames.get(key, data)
+    )
 
 
 @pytest.fixture
@@ -97,9 +103,7 @@ def test_free_text_mode_end_to_end(usda, lang):
     }
     with (
         patch_llm(llm),
-        patch(
-            "streamlit.delta_generator.DeltaGenerator.data_editor", editor_stub(frames)
-        ),
+        patch_editor(frames),
     ):
         at = make_app().run()
         at.sidebar.radio(key="lang").set_value(lang).run()
@@ -148,9 +152,7 @@ def test_llm_unavailable_switches_to_manual_mode(usda):
     frames = {"meal_0_rows": pd.DataFrame({"ingredient": ["2 eggs and toast"]})}
     with (
         patch_llm(FakeLLM(fail=True)),
-        patch(
-            "streamlit.delta_generator.DeltaGenerator.data_editor", editor_stub(frames)
-        ),
+        patch_editor(frames),
     ):
         at = make_app().run()
         at.selectbox(key="meal_0_kind").select("breakfast").run()
@@ -168,9 +170,7 @@ def test_session_cap_switches_to_manual_mode(usda):
     frames = {"meal_0_rows": pd.DataFrame({"ingredient": ["2 eggs and toast"]})}
     with (
         patch_llm(llm),
-        patch(
-            "streamlit.delta_generator.DeltaGenerator.data_editor", editor_stub(frames)
-        ),
+        patch_editor(frames),
     ):
         at = make_app(llm_calls=30).run()
         at.selectbox(key="meal_0_kind").select("breakfast").run()
@@ -186,9 +186,7 @@ def test_row_guardrails_block_the_llm_call(usda):
     frames = {"meal_0_rows": pd.DataFrame({"ingredient": ["x" * 121]})}
     with (
         patch_llm(llm),
-        patch(
-            "streamlit.delta_generator.DeltaGenerator.data_editor", editor_stub(frames)
-        ),
+        patch_editor(frames),
     ):
         at = make_app().run()
         at.selectbox(key="meal_0_kind").select("breakfast").run()
@@ -224,3 +222,111 @@ def test_manual_mode_end_to_end(usda, lang):
 
         at.button(key="meal_0_manual_rm_0").click().run()
         assert not at.metric
+
+
+def test_targets_default_to_neutral_values_and_persist_in_the_url(usda):
+    at = make_app().run()
+    assert not at.exception, at.exception
+    assert [
+        at.number_input(key=k).value for k in ("kcal", "carbs", "protein", "fat")
+    ] == [
+        2000,
+        250,
+        100,
+        67,
+    ]
+    assert qp(at, "kcal") == "2000" and qp(at, "plan") == "maintenance"
+
+    at.number_input(key="protein").set_value(150).run()
+    assert qp(at, "protein") == "150"
+
+    # A URL restores every target input; bad values fall back or are clamped.
+    at = make_app()
+    at.query_params.update(
+        {
+            "kcal": "1800",
+            "carbs": "abc",
+            "fat": "50",
+            "plan": "cut",
+            "sex": "female",
+            "age": "5",
+            "weight": "60.5",
+            "activity": "nonsense",
+            "gkg": "2",
+        }
+    )
+    at.run()
+    assert not at.exception, at.exception
+    assert at.number_input(key="kcal").value == 1800
+    assert at.number_input(key="carbs").value == 250  # invalid -> default
+    assert at.number_input(key="fat").value == 50
+    assert at.selectbox(key="plan").value == "cut"
+    assert at.selectbox(key="sex").value == "female"
+    assert at.number_input(key="age").value == 10  # clamped to the minimum
+    assert at.number_input(key="weight").value == 60.5
+    assert at.selectbox(key="activity").value == "moderate"  # invalid -> default
+    assert at.number_input(key="gkg").value == 2.0
+
+
+def test_plan_change_shifts_kcal_and_carbs(usda):
+    at = make_app().run()
+    at.selectbox(key="plan").select("cut").run()
+    assert at.number_input(key="kcal").value == 1700
+    assert at.number_input(key="carbs").value == 175
+    at.selectbox(key="plan").select("extra_cut").run()
+    assert at.number_input(key="kcal").value == 1500
+    assert at.number_input(key="carbs").value == 125
+    assert qp(at, "plan") == "extra_cut"
+
+
+def test_tdee_estimate_fills_the_targets(usda):
+    at = make_app().run()
+    at.selectbox(key="sex").select("female")
+    at.number_input(key="age").set_value(40)
+    at.number_input(key="weight").set_value(60.0)
+    at.number_input(key="height").set_value(165.0)
+    at.selectbox(key="activity").select("light")
+    at.number_input(key="gkg").set_value(2.0).run()
+    at.button(key="use_estimate").click().run()
+    assert not at.exception, at.exception
+
+    bmr = 10 * 60 + 6.25 * 165 - 5 * 40 - 161
+    maintenance = bmr * 1.375
+    assert at.number_input(key="kcal").value == round(maintenance)
+    assert at.number_input(key="protein").value == 120
+    assert at.number_input(key="fat").value == round(maintenance * 0.30 / 9)
+    assert qp(at, "kcal") == str(round(maintenance))
+
+
+def test_kcal_mismatch_warning(usda):
+    at = make_app().run()
+    assert not any("5%" in w.value or "5 %" in w.value for w in at.warning)
+    at.number_input(key="fat").set_value(150).run()
+    assert any("kcal" in w.value for w in at.warning)
+
+
+def test_extras_count_in_totals_and_progress_bars(usda):
+    llm = FakeLLM()
+    frames = {
+        "meal_0_rows": pd.DataFrame({"ingredient": ["2 eggs and toast"]}),
+        "extras_rows": pd.DataFrame({"ingredient": ["150g rice", "kale"]}),
+    }
+    with patch_llm(llm), patch_editor(frames):
+        at = make_app().run()
+        at.selectbox(key="meal_0_kind").select("breakfast").run()
+        at.button(key="compute").click().run()
+        assert not at.exception, at.exception
+
+        assert llm.calls == 2  # the breakfast and the extras
+        assert [h.value for h in at.subheader] == ["Breakfast", "Daily extras"]
+        assert at.metric[0].value == "479 kcal"  # eggs + toast + rice
+        assert at.metric[0].delta == f"{479 - 2000} kcal"
+        assert len(at.get("progress")) == 4
+        assert len(at.get("download_button")) == 2
+        assert any("not medical" in c.value for c in at.caption)
+        assert [tab.label for tab in at.tabs] == [
+            "Meal 1",
+            "Meal 2",
+            "Meal 3",
+            "Daily extras",
+        ]

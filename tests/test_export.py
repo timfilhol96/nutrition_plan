@@ -82,3 +82,37 @@ def test_empty_meals_are_skipped():
 def test_both_languages_have_the_same_keys():
     keys = {lang: set(t.__globals__["STRINGS"][lang]) for lang in LANGUAGES}
     assert keys["en"] == keys["fr"]
+
+
+def test_long_csv_has_one_row_per_food_with_a_bom():
+    from nutrition.export import build_long_csv
+
+    meals = [
+        Meal(id="meal_0", kind="breakfast", items=[CREPE, PATE]),
+        Meal(id="extras", kind="extras", items=[CREPE]),
+    ]
+    labels = {"meal_0": "Petit-déjeuner", "extras": "Extras"}
+    rows = _parse(build_long_csv(meals, labels))
+    assert rows[0] == [
+        "meal",
+        "food",
+        "grams",
+        "kcal",
+        "carbs",
+        "protein",
+        "fat",
+        "fiber",
+    ]
+    assert rows[1] == [
+        "Petit-déjeuner",
+        "crêpe",
+        "40.0",
+        "90.4",
+        "12.6",
+        "2.9",
+        "3.1",
+        "0.4",
+    ]
+    assert rows[2][:2] == ["Petit-déjeuner", "pâté de campagne"]
+    assert rows[3] == ["Extras", "crêpe", "40.0", "90.4", "12.6", "2.9", "3.1", "0.4"]
+    assert len(rows) == 4

@@ -8,11 +8,17 @@ macro targets. A free LLM turns your text into food items and gram weights;
 The LLM never produces nutrition numbers.
 
 ## TUTORIAL
-- Enter your daily kcal and macros intake
-- Create your daily meals by listing all the ingredients and quantities using natural language (English or French)
-- Generate your macros: each line is parsed, matched to a USDA food and weighed in grams
-- Adjust any match or weight; totals update instantly
-- Download your menu as a csv file
+- Enter your daily kcal and macros, or estimate them (Mifflin–St Jeor TDEE,
+  activity level, protein in g/kg). Targets are kept in the URL, so bookmark
+  it to restore them.
+- Create your daily meals (one tab each) by listing ingredients and quantities
+  in natural language (English or French). "Daily extras" holds anything eaten
+  outside meals (supplements, a protein scoop…).
+- Generate your macros: each line is parsed, matched to a USDA food and weighed
+  in grams
+- Adjust any match or weight; totals and progress bars update instantly
+- Download your menu as a summary CSV or a tidy long-format CSV
+  (`meal, food, grams, kcal, carbs, protein, fat, fiber`)
 
 If no AI provider is available (no key, outage, or the per-session cap of 30
 parsing calls), the app switches to **manual mode**: search USDA foods and
@@ -66,6 +72,7 @@ streamlit run app.py
    session (cache hits are free).
 
 Ingredient text is sent to the configured AI provider for parsing only.
+All figures are estimates, not medical or dietary advice.
 
 ## DEVELOPMENT
 

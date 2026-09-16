@@ -96,6 +96,36 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "diff": "Diff",
         "summary": "Summary",
         "download": "DOWNLOAD MENU",
+        "download_long": "DOWNLOAD DETAILED CSV",
+        "meal_tab": "Meal {n}",
+        "extras": "Daily extras",
+        "extras_help": "Anything eaten outside meals: supplements, a protein scoop, a snack bar…",
+        "tdee_expander": "Estimate my needs (TDEE)",
+        "sex": "Sex",
+        "male": "Male",
+        "female": "Female",
+        "age": "Age",
+        "weight": "Weight (kg)",
+        "height": "Height (cm)",
+        "activity": "Activity level",
+        "activity_sedentary": "Sedentary (little or no exercise)",
+        "activity_light": "Light (1–3 days/week)",
+        "activity_moderate": "Moderate (3–5 days/week)",
+        "activity_active": "Active (6–7 days/week)",
+        "activity_very_active": "Very active (hard daily training)",
+        "protein_per_kg": "Protein (g per kg bodyweight)",
+        "tdee_result": (
+            "Mifflin–St Jeor: BMR **{bmr} kcal**, maintenance **{tdee} kcal**. "
+            "With the selected plan: **{kcal} kcal**, {protein} g protein, "
+            "{fat} g fat (30% of kcal), {carbs} g carbohydrates (the rest)."
+        ),
+        "use_estimate": "Use this estimate",
+        "kcal_mismatch": (
+            "Your macros add up to {atwater} kcal (4·carbs + 4·protein + 9·fat), "
+            "which differs from the {kcal} kcal target by more than 5%."
+        ),
+        "progress": "{macro}: {total} / {target} {unit} ({diff:+d})",
+        "disclaimer": "Estimates only, not medical or dietary advice.",
     },
     "fr": {
         "language": "Français 🇫🇷",
@@ -192,6 +222,36 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "diff": "Écart",
         "summary": "Résumé",
         "download": "TÉLÉCHARGEZ VOTRE MENU",
+        "download_long": "TÉLÉCHARGER LE CSV DÉTAILLÉ",
+        "meal_tab": "Repas {n}",
+        "extras": "Extras de la journée",
+        "extras_help": "Tout ce qui est pris hors repas : compléments, dose de protéines, barre…",
+        "tdee_expander": "Estimer mes besoins (TDEE)",
+        "sex": "Sexe",
+        "male": "Homme",
+        "female": "Femme",
+        "age": "Âge",
+        "weight": "Poids (kg)",
+        "height": "Taille (cm)",
+        "activity": "Niveau d'activité",
+        "activity_sedentary": "Sédentaire (peu ou pas d'exercice)",
+        "activity_light": "Léger (1 à 3 jours/semaine)",
+        "activity_moderate": "Modéré (3 à 5 jours/semaine)",
+        "activity_active": "Actif (6 à 7 jours/semaine)",
+        "activity_very_active": "Très actif (entraînement intense quotidien)",
+        "protein_per_kg": "Protéines (g par kg de poids)",
+        "tdee_result": (
+            "Mifflin–St Jeor : métabolisme de base **{bmr} kcal**, maintenance "
+            "**{tdee} kcal**. Avec le plan choisi : **{kcal} kcal**, {protein} g de "
+            "protéines, {fat} g de lipides (30 % des kcal), {carbs} g de glucides (le reste)."
+        ),
+        "use_estimate": "Utiliser cette estimation",
+        "kcal_mismatch": (
+            "Vos macros totalisent {atwater} kcal (4·glucides + 4·protéines + 9·lipides), "
+            "soit plus de 5 % d'écart avec l'objectif de {kcal} kcal."
+        ),
+        "progress": "{macro} : {total} / {target} {unit} ({diff:+d})",
+        "disclaimer": "Estimations uniquement, pas un avis médical ni diététique.",
     },
 }
 

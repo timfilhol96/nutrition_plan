@@ -58,3 +58,51 @@ def meal_numbers(meals: list[Meal]) -> dict[str, int | None]:
         seen[meal.kind] += 1
         numbers[meal.id] = seen[meal.kind] if counts[meal.kind] > 1 else None
     return numbers
+
+
+def shift_plan(targets: DailyTargets, old_plan: str, new_plan: str) -> DailyTargets:
+    """Move targets from one calorie plan to another (carbs absorb the kcal change)."""
+    delta = CALORIE_PLANS[new_plan] - CALORIE_PLANS[old_plan]
+    return replace(targets, kcal=targets.kcal + delta, carbs=targets.carbs + delta / 4)
+
+
+# Standard activity multipliers applied to the basal metabolic rate.
+ACTIVITY_MULTIPLIERS = {
+    "sedentary": 1.2,
+    "light": 1.375,
+    "moderate": 1.55,
+    "active": 1.725,
+    "very_active": 1.9,
+}
+FAT_KCAL_SHARE = 0.30  # share of kcal given to fat when deriving targets from a TDEE
+
+
+def mifflin_st_jeor(sex: str, age: int, weight_kg: float, height_cm: float) -> float:
+    """Basal metabolic rate in kcal/day."""
+    base = 10 * weight_kg + 6.25 * height_cm - 5 * age
+    return base + 5 if sex == "male" else base - 161
+
+
+def tdee(bmr: float, activity: str) -> float:
+    return bmr * ACTIVITY_MULTIPLIERS[activity]
+
+
+def targets_from_tdee(
+    kcal: float,
+    weight_kg: float,
+    protein_g_per_kg: float,
+    fat_share: float = FAT_KCAL_SHARE,
+) -> DailyTargets:
+    """Split a kcal budget: protein from bodyweight, fat as a kcal share, carbs the rest."""
+    protein = weight_kg * protein_g_per_kg
+    fat = kcal * fat_share / 9
+    carbs = max(kcal - 4 * protein - 9 * fat, 0) / 4
+    return DailyTargets(kcal=kcal, carbs=carbs, protein=protein, fat=fat)
+
+
+def kcal_mismatch(targets: DailyTargets) -> float:
+    """Relative gap between the kcal target and the Atwater kcal of its macros."""
+    if targets.kcal <= 0:
+        return 0.0
+    expected = atwater_kcal(targets.carbs, targets.protein, targets.fat)
+    return abs(expected - targets.kcal) / targets.kcal

@@ -112,3 +112,46 @@ def test_plan_and_export_do_not_import_streamlit():
         "sys.exit(1 if 'streamlit' in sys.modules else 0)"
     )
     assert subprocess.run([sys.executable, "-c", code]).returncode == 0
+
+
+def test_mifflin_st_jeor_and_tdee():
+    from nutrition.plan import ACTIVITY_MULTIPLIERS, mifflin_st_jeor, tdee
+
+    assert mifflin_st_jeor("male", 30, 70, 175) == pytest.approx(1648.75)
+    assert mifflin_st_jeor("female", 30, 70, 175) == pytest.approx(1482.75)
+    assert tdee(1648.75, "sedentary") == pytest.approx(1648.75 * 1.2)
+    assert tdee(1648.75, "very_active") == pytest.approx(1648.75 * 1.9)
+    assert list(ACTIVITY_MULTIPLIERS.values()) == [1.2, 1.375, 1.55, 1.725, 1.9]
+
+
+def test_targets_from_tdee_use_bodyweight_protein_and_close_the_kcal_budget():
+    from nutrition.plan import targets_from_tdee
+
+    targets = targets_from_tdee(2000, weight_kg=70, protein_g_per_kg=1.6)
+    assert targets.protein == pytest.approx(112)
+    assert targets.fat == pytest.approx(2000 * 0.30 / 9)
+    assert atwater_kcal(targets.carbs, targets.protein, targets.fat) == pytest.approx(
+        2000
+    )
+    # Carbs never go negative when protein + fat already exceed the budget.
+    assert targets_from_tdee(500, weight_kg=100, protein_g_per_kg=3).carbs == 0
+
+
+def test_kcal_mismatch():
+    from nutrition.plan import kcal_mismatch
+
+    assert kcal_mismatch(DailyTargets(kcal=2000, carbs=250, protein=100, fat=67)) < 0.01
+    assert (
+        kcal_mismatch(DailyTargets(kcal=2000, carbs=250, protein=100, fat=100)) > 0.05
+    )
+    assert kcal_mismatch(DailyTargets(kcal=0, carbs=1, protein=1, fat=1)) == 0.0
+
+
+def test_shift_plan_moves_kcal_and_carbs_relative_to_current_targets():
+    from nutrition.plan import shift_plan
+
+    base = DailyTargets(kcal=2000, carbs=250, protein=100, fat=67)
+    cut = shift_plan(base, "maintenance", "cut")
+    assert (cut.kcal, cut.carbs, cut.protein, cut.fat) == (1700, 175, 100, 67)
+    assert shift_plan(cut, "cut", "extra_cut").kcal == 1500
+    assert shift_plan(cut, "cut", "maintenance") == base

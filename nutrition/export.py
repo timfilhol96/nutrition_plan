@@ -55,3 +55,17 @@ def build_csv(
     writer.writerow([t("diff", lang)] + [_num(diff[m]) for m in TARGET_MACROS] + [""])
 
     return buffer.getvalue().encode("utf-8-sig")
+
+
+def build_long_csv(meals: list[Meal], labels: dict[str, str]) -> bytes:
+    """Tidy long format: one row per food (meal, food, grams, kcal, carbs, protein, fat, fiber)."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["meal", "food", "grams"] + list(MACROS))
+    for meal in meals:
+        for item in meal.items:
+            writer.writerow(
+                [labels[meal.id], item.name, round(float(item.grams), 1)]
+                + [round(float(getattr(item, m)), 1) for m in MACROS]
+            )
+    return buffer.getvalue().encode("utf-8-sig")
