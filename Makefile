@@ -7,3 +7,6 @@ streamlit:
 
 black:
 	@black . --extend-exclude \.ipynb
+
+test:
+	@pytest

@@ -1,6 +1,7 @@
 scraping.ipynb
 Pipfile.lock
 default.json
-__pycache__/*
+__pycache__/
 .streamlit/*
 .venv/
+.pytest_cache/
