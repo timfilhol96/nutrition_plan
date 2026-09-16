@@ -26,6 +26,8 @@ enter grams yourself. Manual mode can also be toggled in the sidebar.
 
 ## SETUP
 
+Python 3.10 or newer (3.12 recommended and used for the tests).
+
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt        # app

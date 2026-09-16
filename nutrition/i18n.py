@@ -14,10 +14,6 @@ STRINGS = {
 - Easily adjust the quantities of any ingredient to exactly hit your daily macros
 - Download your menu as a csv file
 ---
-- Check out the *Zero To Hero* fitness [program](https://raptorcoaching.pro/?ref=Ms9zfyaB_yaBS8)🦖🇫🇷.
-- Get **17%** off on any purchase with my promo code: **TIFI96V0yNLM**
-
----
 This app was made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) using [streamlit](https://streamlit.io/) and [USDA FoodData Central](https://fdc.nal.usda.gov/).
 
 ---
@@ -139,10 +135,6 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
 - Générez vos macros
 - Ajustez facilement les quantités pour arriver à vos objectifs
 - Téléchargez votre menu
----
-- N'hésitez pas à consulter le programme fitness [*Zero To Hero*](https://raptorcoaching.pro/?ref=Ms9zfyaB_yaBS8)🦖🇫🇷.
-- Obtenez **17%** de réduction sur tout achat avec mon code promotionnel : **TIFI96V0yNLM**
-
 ---
 Cette application a été créée par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) grâce à [streamlit](https://streamlit.io/) et [USDA FoodData Central](https://fdc.nal.usda.gov/).
 
