@@ -40,7 +40,7 @@ GROQ_API_KEY = "..."         # optional — primary LLM provider (free tier)
 OPENROUTER_API_KEY = "..."   # optional — fallback LLM provider (free models only)
 
 # Optional overrides (defaults in nutrition/config.py)
-# GROQ_MODEL = "llama-3.3-70b-versatile"
+# GROQ_MODEL = "qwen/qwen3.8-27b"
 # OPENROUTER_MODEL = "google/gemma-4-31b-it:free"
 # LLM_SESSION_CAP = 30
 ```

@@ -9,7 +9,7 @@ import streamlit as st
 DEFAULTS = {
     # Primary LLM provider (free tier).
     "GROQ_BASE_URL": "https://api.groq.com/openai/v1",
-    "GROQ_MODEL": "llama-3.3-70b-versatile",
+    "GROQ_MODEL": "qwen/qwen3.8-27b",
     # Fallback LLM provider; must be a ":free" model.
     "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
     "OPENROUTER_MODEL": "google/gemma-4-31b-it:free",
