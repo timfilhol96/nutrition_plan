@@ -1,6 +1,7 @@
 """LLM providers behind OpenAI-compatible chat endpoints, with fallback."""
 
 import json
+import re
 import time
 from typing import Callable, Protocol
 
@@ -20,7 +21,9 @@ class ProviderError(Exception):
 
 
 class RateLimited(ProviderError):
-    pass
+    def __init__(self, message: str, retry_after: float | None = None):
+        super().__init__(message)
+        self.retry_after = retry_after  # seconds, when the provider said how long
 
 
 class ProviderTimeout(ProviderError):
@@ -39,15 +42,38 @@ class LLMProvider(Protocol):
         ...
 
 
-def error_detail(response: httpx.Response) -> str:
-    """Short human-readable reason from an error response body."""
+def error_message(response: httpx.Response) -> str:
     try:
         error = response.json().get("error")
         message = error.get("message") if isinstance(error, dict) else error
-    except ValueError:
+    except (ValueError, AttributeError):
         message = response.text
-    message = " ".join(str(message or "").split())
-    return f"HTTP {response.status_code}" + (f" ({message[:160]})" if message else "")
+    return " ".join(str(message or "").split())
+
+
+def error_detail(response: httpx.Response) -> str:
+    """Short human-readable reason from an error response body."""
+    message = error_message(response)
+    return f"HTTP {response.status_code}" + (f" ({message[:300]})" if message else "")
+
+
+def retry_after_seconds(response: httpx.Response) -> float | None:
+    """How long the provider asked us to wait: Retry-After header, else the message."""
+    try:
+        header = response.headers.get("retry-after")
+        if header:
+            return float(header)
+    except (TypeError, ValueError, AttributeError):
+        pass
+    # Groq: "Please try again in 7.66s" / "in 2m59.5s" / "in 350ms"
+    match = re.search(
+        r"try again in (?:(\d+)m)?([\d.]+)(ms|s)", error_message(response)
+    )
+    if not match:
+        return None
+    minutes, amount, unit = match.groups()
+    seconds = float(amount) / (1000 if unit == "ms" else 1)
+    return seconds + 60 * int(minutes or 0)
 
 
 class OpenAICompatibleProvider:
@@ -90,7 +116,10 @@ class OpenAICompatibleProvider:
         except httpx.HTTPError as exc:
             raise ProviderError(f"{self.name}: {exc}") from exc
         if response.status_code == 429:
-            raise RateLimited(f"{self.name}: rate limited, {error_detail(response)}")
+            raise RateLimited(
+                f"{self.name}: rate limited, {error_detail(response)}",
+                retry_after=retry_after_seconds(response),
+            )
         if response.status_code != 200:
             raise ProviderError(f"{self.name}: {error_detail(response)}")
         try:
@@ -129,6 +158,10 @@ def extract_json(text: str) -> str:
 class ProviderChain:
     """Try providers in order; skip rate-limited ones for a cooldown period.
 
+    A 429 that asks for a short wait (<= max_wait_s) is honoured in place:
+    the chain sleeps and retries the same provider once. Longer waits put the
+    provider on cooldown for the requested time (or cooldown_s when unknown).
+
     `cooldowns` maps provider name -> timestamp until which it is skipped. The
     app passes a dict living in st.session_state so cooldowns persist across
     reruns. `budget` caps the number of complete_json calls; `calls` counts
@@ -141,13 +174,17 @@ class ProviderChain:
         cooldowns: dict[str, float],
         cooldown_s: float = 60.0,
         budget: int | None = None,
+        max_wait_s: float = 10.0,
         clock: Callable[[], float] = time.time,
+        sleep: Callable[[float], None] = time.sleep,
     ):
         self.providers = providers
         self.cooldowns = cooldowns
         self.cooldown_s = cooldown_s
         self.budget = budget
+        self.max_wait_s = max_wait_s
         self.clock = clock
+        self.sleep = sleep
         self.calls = 0
 
     def complete_json(self, system: str, user: str) -> str:
@@ -157,17 +194,25 @@ class ProviderChain:
             raise LLMBudgetExhausted("LLM call cap reached")
         self.calls += 1
 
-        now = self.clock()
         errors = []
         for provider in self.providers:
-            if self.cooldowns.get(provider.name, 0) > now:
+            if self.cooldowns.get(provider.name, 0) > self.clock():
                 errors.append(f"{provider.name}: cooling down")
                 continue
-            try:
-                return extract_json(provider.complete_json(system, user))
-            except RateLimited as exc:
-                self.cooldowns[provider.name] = now + self.cooldown_s
-                errors.append(str(exc))
-            except ProviderError as exc:
-                errors.append(str(exc))
+            for attempt in (1, 2):
+                try:
+                    return extract_json(provider.complete_json(system, user))
+                except RateLimited as exc:
+                    wait = exc.retry_after
+                    if attempt == 1 and wait is not None and wait <= self.max_wait_s:
+                        self.sleep(wait)
+                        continue
+                    self.cooldowns[provider.name] = self.clock() + (
+                        wait if wait is not None else self.cooldown_s
+                    )
+                    errors.append(str(exc))
+                    break
+                except ProviderError as exc:
+                    errors.append(str(exc))
+                    break
         raise LLMUnavailable("; ".join(errors))

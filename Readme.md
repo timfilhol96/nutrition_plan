@@ -62,9 +62,12 @@ streamlit run app.py
    still fail are offered for manual search. Parses are cached globally by
    normalized text, so repeated meals cost nothing.
 2. **Providers** — tried in order: **Groq** (`GROQ_MODEL`), then **OpenRouter**
-   (`OPENROUTER_MODEL`, a `:free` model). A provider is skipped for a cooldown
-   after a 429, and on 5xx / timeout / invalid JSON the next one is tried.
-   Missing keys simply remove that provider from the chain.
+   (`OPENROUTER_MODEL`, a `:free` model). On a 429 the provider's
+   `Retry-After` is honoured: a short wait (≤ 10 s) is slept through, a longer
+   one puts the provider on cooldown for that long (60 s when unknown). On
+   5xx / timeout / invalid JSON the next provider is tried. Missing keys
+   simply remove that provider from the chain. Free tiers cap *tokens per
+   minute*; each parse costs about 1k input tokens.
 3. **Nutrition** — `nutrition/usda.py` searches FDC (Foundation + SR Legacy,
    values per 100 g) and scales by grams. Energy uses nutrient 1008, falling
    back to the Atwater energies (2048, 2047), kJ (1062), then computed Atwater.
@@ -93,9 +96,11 @@ python eval/parser_eval.py --no-usda    # LLM only
 python eval/parser_eval.py --lang fr --limit 10
 ```
 
-It reports the JSON failure rate, the median absolute grams error and the
-top-1 USDA match accuracy, then lists every mismatch. It is never run by
-`pytest`.
+It prints one line per case, then the JSON failure rate, the median absolute
+grams error and the top-1 USDA match accuracy, and lists every mismatch.
+When a provider is rate limited it waits as long as the provider asks and
+carries on; after three consecutive provider failures it stops. It is never
+run by `pytest`.
 
 ---
 This app was made using [streamlit](https://streamlit.io/), [USDA FoodData Central](https://fdc.nal.usda.gov/), [Groq](https://groq.com/) and [OpenRouter](https://openrouter.ai/).

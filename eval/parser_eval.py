@@ -156,6 +156,10 @@ def main() -> None:
             result = parse_waiting_for_cooldowns(parser, chain, text, case["lang"])
             items = [item for item in result.items if item.row == 1]
             consecutive_unavailable = 0
+            summary = (
+                ", ".join(f"{i.name_en} {i.grams:g} g" for i in items) or "no item"
+            )
+            print(f" · [{case['lang']}] {text!r} -> {summary}")
         except (ParseFailed, LLMUnavailable) as exc:
             items = []
             failures.append(f"[{case['lang']}] {text!r}: {type(exc).__name__}: {exc}")

@@ -91,10 +91,12 @@ def test_extract_json_tolerates_code_fences():
         extract_json("[1, 2]")
 
 
-def _response(status, payload):
+def _response(status, payload, headers=None):
     response = MagicMock()
     response.status_code = status
     response.json.return_value = payload
+    response.headers = headers or {}
+    response.text = json.dumps(payload)
     return response
 
 
@@ -159,3 +161,72 @@ def test_list_models():
     ):
         with pytest.raises(ProviderError):
             provider.list_models()
+
+
+def test_short_retry_after_is_waited_out_on_the_same_provider():
+    groq = FakeProvider(
+        "groq", [RateLimited("groq: rate limited", retry_after=2.5), GOOD]
+    )
+    openrouter = FakeProvider("openrouter", [GOOD])
+    slept = []
+    chain = ProviderChain([groq, openrouter], {}, sleep=slept.append, clock=Clock())
+    assert chain.complete_json("s", "u") == GOOD
+    assert slept == [2.5]
+    assert len(groq.calls) == 2 and openrouter.calls == []
+    assert chain.cooldowns == {}
+
+
+def test_long_retry_after_sets_a_matching_cooldown():
+    groq = FakeProvider("groq", [RateLimited("groq: rate limited", retry_after=120)])
+    openrouter = FakeProvider("openrouter", [GOOD])
+    slept = []
+    cooldowns = {}
+    chain = ProviderChain(
+        [groq, openrouter], cooldowns, sleep=slept.append, clock=Clock(1000)
+    )
+    assert chain.complete_json("s", "u") == GOOD
+    assert slept == []
+    assert cooldowns["groq"] == pytest.approx(1120)
+
+
+def test_rate_limited_twice_in_a_row_moves_on():
+    groq = FakeProvider(
+        "groq",
+        [RateLimited("groq: x", retry_after=1), RateLimited("groq: y", retry_after=1)],
+    )
+    openrouter = FakeProvider("openrouter", [GOOD])
+    chain = ProviderChain(
+        [groq, openrouter], {}, sleep=lambda s: None, clock=Clock(1000)
+    )
+    assert chain.complete_json("s", "u") == GOOD
+    assert len(groq.calls) == 2 and len(openrouter.calls) == 1
+    assert chain.cooldowns["groq"] == pytest.approx(1001)
+
+
+@pytest.mark.parametrize(
+    "headers, message, expected",
+    [
+        ({"retry-after": "3"}, "", 3.0),
+        ({}, "Rate limit reached. Please try again in 7.66s. Visit ...", 7.66),
+        ({}, "Please try again in 2m59.5s.", 179.5),
+        ({}, "Please try again in 350ms.", 0.35),
+        ({}, "Provider returned error", None),
+    ],
+)
+def test_retry_after_parsing(headers, message, expected):
+    from nutrition.llm import retry_after_seconds
+
+    response = _response(429, {"error": {"message": message}}, headers)
+    assert retry_after_seconds(response) == expected
+
+
+def test_provider_attaches_retry_after_to_rate_limited():
+    provider = OpenAICompatibleProvider("groq", "https://x/v1", "KEY", "m")
+    body = {
+        "error": {"message": "Rate limit reached on ITPM. Please try again in 4.2s."}
+    }
+    with patch("nutrition.llm.httpx.post", return_value=_response(429, body)):
+        with pytest.raises(RateLimited) as exc:
+            provider.complete_json("s", "u")
+    assert exc.value.retry_after == 4.2
+    assert "ITPM" in str(exc.value)
