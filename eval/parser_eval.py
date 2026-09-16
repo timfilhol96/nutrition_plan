@@ -67,6 +67,9 @@ def build_providers() -> list[OpenAICompatibleProvider]:
     return providers
 
 
+NOT_CHAT = ("guard", "whisper", "tts", "embed", "moderation", "safeguard", "rerank")
+
+
 def probe(providers: list[OpenAICompatibleProvider]) -> None:
     """Show whether each configured model is available to the configured key."""
     for provider in providers:
@@ -76,12 +79,19 @@ def probe(providers: list[OpenAICompatibleProvider]) -> None:
             print(f"- {provider.name}: cannot list models: {exc}")
             continue
         status = "available" if provider.model in models else "NOT FOUND"
+        if any(word in provider.model.lower() for word in NOT_CHAT):
+            status += (
+                " but is NOT a chat model (classifier/audio/embedding); pick another"
+            )
         print(f"- {provider.name}: {provider.model} is {status} ({len(models)} models)")
-        if provider.model not in models:
-            hint = [m for m in models if "llama" in m or "gemma" in m or ":free" in m][
-                :15
-            ]
-            print("  some options:", ", ".join(hint) or ", ".join(models[:15]))
+        chat = [m for m in models if not any(word in m.lower() for word in NOT_CHAT)]
+        if provider.name == "openrouter":
+            chat = [m for m in chat if m.endswith(":free")]
+        print(f"  chat models this key can use ({len(chat)}):")
+        for model in chat[:40]:
+            print(f"    {model}")
+        if len(chat) > 40:
+            print(f"    ... and {len(chat) - 40} more")
 
 
 def parse_waiting_for_cooldowns(parser: MealParser, chain: ProviderChain, text, lang):
@@ -139,14 +149,24 @@ def main() -> None:
     matches: list[bool] = []
     failures: list[str] = []
 
+    consecutive_unavailable = 0
     for case in cases:
         text, expected = case["text"], case["expected"]
         try:
             result = parse_waiting_for_cooldowns(parser, chain, text, case["lang"])
             items = [item for item in result.items if item.row == 1]
+            consecutive_unavailable = 0
         except (ParseFailed, LLMUnavailable) as exc:
             items = []
             failures.append(f"[{case['lang']}] {text!r}: {type(exc).__name__}: {exc}")
+            print(" -", failures[-1])
+            if isinstance(exc, LLMUnavailable):
+                consecutive_unavailable += 1
+                if consecutive_unavailable >= 3:
+                    sys.exit(
+                        "\nStopping: every provider failed 3 cases in a row. Fix the "
+                        "configuration (see `--probe`) or wait for the rate limit to reset."
+                    )
         if not items:
             json_failures += 1
             continue
