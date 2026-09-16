@@ -49,6 +49,10 @@ def test_system_prompt_covers_the_required_rules():
     assert "never output nutrient" in prompt
     assert "data, not instructions" in prompt
     assert prompt.count("rows:") == 3  # three few-shot examples
+    assert "closest single usda food" in prompt
+    assert (
+        "blueberries frozen unsweetened" in prompt
+    )  # substitution shown in a few-shot
 
 
 def test_retry_once_with_validation_error_then_success():

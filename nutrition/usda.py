@@ -81,6 +81,48 @@ def parse_candidate(food: dict) -> UsdaCandidate:
     )
 
 
+# Description prefixes that an ingredient line almost never means. They are
+# moved to the end of the candidate list unless the query itself asks for them.
+DEMOTED_PREFIXES = {
+    "babyfood": ("baby", "babyfood", "infant"),
+    "beverages": (
+        "beverage",
+        "drink",
+        "juice",
+        "soda",
+        "shake",
+        "smoothie",
+        "coffee",
+        "tea",
+    ),
+    "snacks": ("snack", "bar", "chips", "crisps"),
+    "snack": ("snack", "bar"),
+    "fast foods": (
+        "fast",
+        "burger",
+        "fries",
+        "pizza",
+        "nuggets",
+        "mcdonald",
+        "big mac",
+    ),
+    "restaurant": ("restaurant",),
+    "formulated bar": ("bar",),
+}
+
+
+def rank_candidates(candidates: list[UsdaCandidate], query: str) -> list[UsdaCandidate]:
+    """Keep FDC's order but push demoted categories last (stable)."""
+    words = set(query.lower().replace(",", " ").split())
+
+    def demoted(candidate: UsdaCandidate) -> bool:
+        prefix = candidate.description.split(",")[0].strip().lower()
+        hints = DEMOTED_PREFIXES.get(prefix)
+        return hints is not None and not any(hint in words for hint in hints)
+
+    return sorted(candidates, key=demoted)
+
+
 @st.cache_data(ttl=CACHE_TTL_S, show_spinner=False)
 def _search_cached(
     api_key: str, query: str, k: int, require_all: bool
@@ -103,7 +145,8 @@ def _search_cached(
         raise UsdaError(str(exc)) from exc
     if response.status_code != 200:
         raise UsdaError(f"HTTP {response.status_code}")
-    return [parse_candidate(food) for food in response.json().get("foods", [])]
+    candidates = [parse_candidate(food) for food in response.json().get("foods", [])]
+    return rank_candidates(candidates, query)
 
 
 class UsdaClient:

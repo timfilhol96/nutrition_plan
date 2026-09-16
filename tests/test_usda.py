@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from conftest import fake_usda_get, nutrients
+from nutrition.plan import MACROS
 from nutrition.usda import (
     UsdaCandidate,
     UsdaClient,
@@ -124,3 +125,35 @@ def test_require_all_words_is_passed_through():
         UsdaClient("KEY").search("egg fried")
     flags = [c.kwargs["params"].get("requireAllWords") for c in get.call_args_list]
     assert flags == ["true", None]
+
+
+def _cand(description):
+    return UsdaCandidate(
+        hash(description) % 10**6, description, {m: 0.0 for m in MACROS}
+    )
+
+
+def test_rank_candidates_demotes_babyfood_beverages_and_snack_bars():
+    from nutrition.usda import rank_candidates
+
+    hits = [
+        _cand("Snack, Mixed Berry Bar"),
+        _cand("Babyfood, banana with mixed berries, strained"),
+        _cand("Beverages, POWERADE, Zero, Mixed Berry"),
+        _cand("Blueberries, frozen, unsweetened"),
+        _cand("Vegetables, mixed, frozen, unprepared"),
+    ]
+    ranked = [c.description for c in rank_candidates(hits, "mixed berries")]
+    assert ranked[:2] == [
+        "Blueberries, frozen, unsweetened",
+        "Vegetables, mixed, frozen, unprepared",
+    ]
+    assert ranked[2:] == [
+        c.description for c in hits[:3]
+    ]  # demoted, original order kept
+
+    # The demotion is lifted when the query asks for that category.
+    ranked = [c.description for c in rank_candidates(hits, "mixed berry snack bar")]
+    assert ranked[0] == "Snack, Mixed Berry Bar"
+    ranked = [c.description for c in rank_candidates(hits, "babyfood banana")]
+    assert ranked[0].startswith("Babyfood")
