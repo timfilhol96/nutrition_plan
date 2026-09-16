@@ -1,13 +1,13 @@
 import streamlit as st
 import streamlit_ext as ste
 import pandas as pd
-from utils import api_call, convert_df, get_macros
+import requests
+from utils import NutritionixError, api_call, convert_df, get_macros
 
 
 def run_english_app(my_maintenance_macros, URL, headers):
     with st.sidebar:
-        st.write(
-            """
+        st.write("""
     # MACROS CALCULATOR
     ---
     ## TUTORIAL
@@ -27,14 +27,11 @@ def run_english_app(my_maintenance_macros, URL, headers):
     Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
 
     ---
-                    """
-        )
+                    """)
 
-    st.columns(3)[1].markdown(
-        """
+    st.columns(3)[1].markdown("""
                             # NUTRITION PLAN
-                            """
-    )
+                            """)
     st.markdown(
         """
         ---
@@ -79,10 +76,8 @@ def run_english_app(my_maintenance_macros, URL, headers):
     )
 
     #####################################################################################
-    st.markdown(
-        """
-                ## MENU"""
-    )
+    st.markdown("""
+                ## MENU""")
 
     nb_meals = ste.number_input(
         "Select number of daily meals:", min_value=1, step=1, value=3
@@ -111,19 +106,31 @@ def run_english_app(my_maintenance_macros, URL, headers):
             meals[f"{meal_name} #{i}"] = meal_df
 
     def generate_macro_table(edited_df):
-        if edited_df.shape[0] != 0:
-            ingredients = edited_df["Ingredient"].values
+        ingredients = [
+            str(x).strip()
+            for x in edited_df["Ingredient"]
+            if not pd.isna(x) and str(x).strip() != ""
+        ]
+        if ingredients:
             macros = []
             for ingredient in ingredients:
-                if ingredient != "":
-                    query = {"query": ingredient}
-                    macros.append(get_macros(api_call(URL, headers, query), ingredient))
+                query = {"query": ingredient}
+                try:
+                    foods = api_call(URL, headers, query)
+                except (NutritionixError, requests.RequestException):
+                    st.warning(f"No match found for '{ingredient}', skipping it.")
+                    continue
+                macros.append(get_macros(foods, ingredient))
 
+            if not macros:
+                return None
             df = pd.DataFrame.from_records(macros)
-            df.loc["TOTAL"] = df.iloc[:, 3:].sum()
-            df.loc[df.index[-1], "Ingredient"] = "TOTAL"
-            df.loc[df.index[-1], "Serving weight (g)"] = ""
-            df.loc[df.index[-1], "Food name"] = ""
+            df.loc["TOTAL"] = {
+                "Ingredient": "TOTAL",
+                "Serving weight (g)": "",
+                "Food name": "",
+                **df.iloc[:, 3:].sum().to_dict(),
+            }
             return df
         return None
 
@@ -170,26 +177,26 @@ def run_english_app(my_maintenance_macros, URL, headers):
             col1, col2, col3, col4 = st.columns(4)
             col1.metric(
                 "Total kcal",
-                f"{round(total_df.loc['TOTAL'][0])} kcal",
-                f"{round(total_df.loc['DIFF'][0])} kcal",
+                f"{round(total_df.loc['TOTAL', 'kcal'])} kcal",
+                f"{round(total_df.loc['DIFF', 'kcal'])} kcal",
                 delta_color="normal",
             )
             col2.metric(
                 "Total Carbohydrates",
-                f"{round(total_df.loc['TOTAL'][1])} g",
-                f"{round(total_df.loc['DIFF'][1])} g",
+                f"{round(total_df.loc['TOTAL', 'Carbohydrates'])} g",
+                f"{round(total_df.loc['DIFF', 'Carbohydrates'])} g",
                 delta_color="normal",
             )
             col3.metric(
                 "Total Proteins",
-                f"{round(total_df.loc['TOTAL'][2])} g",
-                f"{round(total_df.loc['DIFF'][2])} g",
+                f"{round(total_df.loc['TOTAL', 'Proteins'])} g",
+                f"{round(total_df.loc['DIFF', 'Proteins'])} g",
                 delta_color="normal",
             )
             col4.metric(
                 "Total Fats",
-                f"{round(total_df.loc['TOTAL'][3])} g",
-                f"{round(total_df.loc['DIFF'][3])} g",
+                f"{round(total_df.loc['TOTAL', 'Fats'])} g",
+                f"{round(total_df.loc['DIFF', 'Fats'])} g",
                 delta_color="normal",
             )
 
@@ -210,8 +217,8 @@ def run_english_app(my_maintenance_macros, URL, headers):
         st.markdown("---")
         st.download_button(
             "DOWNLOAD MENU",
-            regrouped_csv,
+            regrouped_csv.encode("utf-8-sig"),
             "menu.csv",
-            mime="csv",
+            mime="text/csv",
             use_container_width=True,
         )

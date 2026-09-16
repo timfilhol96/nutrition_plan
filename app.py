@@ -5,7 +5,6 @@
 # gold = #CE9E5E
 
 import streamlit as st
-import os
 from app_english import run_english_app
 from app_french import run_french_app
 
@@ -17,16 +16,7 @@ my_maintenance_macros = {
     "fats": 69,
 }
 
-API_ID = os.environ["NIX_APP_ID"]
-API_KEY = os.environ["NIX_API_KEY"]
 URL = "https://trackapi.nutritionix.com/v2/natural/nutrients"
-
-headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    "x-app-id": API_ID,
-    "x-app-key": API_KEY,
-    "x-remote-user-id": "0",
-}
 
 #######################
 
@@ -36,6 +26,25 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto",
 )
+
+# st.secrets raises a FileNotFoundError subclass when no secrets file exists
+# and KeyError when the file exists but the key is missing.
+try:
+    API_ID = st.secrets["NIX_APP_ID"]
+    API_KEY = st.secrets["NIX_API_KEY"]
+except (KeyError, FileNotFoundError):
+    st.error(
+        "Missing Nutritionix credentials: set `NIX_APP_ID` and `NIX_API_KEY` "
+        "in `.streamlit/secrets.toml` (or the app's secrets on Streamlit Cloud)."
+    )
+    st.stop()
+
+headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    "x-app-id": API_ID,
+    "x-app-key": API_KEY,
+    "x-remote-user-id": "0",
+}
 with st.sidebar:
     language = st.radio(" ", ("English 🇬🇧", "Français 🇫🇷"))
 
