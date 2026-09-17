@@ -1,5 +1,6 @@
 """AppTest smoke tests. The LLM and USDA HTTP calls are mocked."""
 
+import re
 from pathlib import Path
 from unittest.mock import patch
 
@@ -46,6 +47,20 @@ def patch_llm(llm):
         "nutrition.llm.OpenAICompatibleProvider.complete_json",
         lambda provider, system, user: llm(provider, system, user),
     )
+
+
+def summary(at):
+    """The HTML of the daily summary strip ("" when no meal has items)."""
+    return "".join(m.value for m in at.markdown if "np-summary" in m.value)
+
+
+def summary_kcal(at):
+    """The total shown on the kcal card (the first one), e.g. "479 kcal"."""
+    match = re.search(
+        r'<div class="np-value">(\d+)<span class="np-target"> / \d+ kcal</span>',
+        summary(at),
+    )
+    return f"{match.group(1)} kcal" if match else None
 
 
 def qp(at, key):
@@ -112,10 +127,13 @@ def test_free_text_mode_end_to_end(usda, lang):
         at.button(key="compute").click().run()
         assert not at.exception, at.exception
 
-        # One LLM call per meal, two meals, numbered headers.
+        # One LLM call per meal, two meals, numbered tab labels.
         assert llm.calls == 2
         lunch = {"en": "Lunch", "fr": "Déjeuner"}[lang]
-        assert [h.value for h in at.subheader] == [f"{lunch} 1", f"{lunch} 2"]
+        assert [tab.label for tab in at.tabs][:2] == [
+            f"🥗 {lunch} 1",
+            f"🥗 {lunch} 2",
+        ]
 
         # Multi-food row -> two items with their own match selectbox.
         assert at.selectbox(key="meal_0_ov_r1_i0_match").value == 1001
@@ -125,13 +143,14 @@ def test_free_text_mode_end_to_end(usda, lang):
         assert at.text_input(key="meal_1_ov_r2_i1_q").value == "kale"
 
         # egg 100 g (196) + toast 30 g (87.9) + rice 150 g (195) = 478.9
-        assert at.metric[0].value == "479 kcal"
+        assert summary_kcal(at) == "479 kcal"
+        assert f"🥗 {lunch} 1 <b>284 kcal</b>" in summary(at)
         assert at.session_state["llm_calls"] == 2
 
         # Editing grams recomputes locally: no new LLM call.
         at.number_input(key="meal_0_ov_r1_i0_grams").set_value(200.0).run()
         assert not at.exception
-        assert at.metric[0].value == "675 kcal"
+        assert summary_kcal(at) == "675 kcal"
         # Picking another USDA match too.
         at.selectbox(key="meal_0_ov_r1_i1_match").select(1002).run()
         assert llm.calls == 2
@@ -145,7 +164,7 @@ def test_free_text_mode_end_to_end(usda, lang):
         # A changed row makes the results stale.
         frames["meal_1_rows"] = pd.DataFrame({"ingredient": ["150g rice"]})
         at.run()
-        assert not at.subheader and not at.metric
+        assert not summary(at) and not at.get("download_button")
 
 
 def test_llm_unavailable_switches_to_manual_mode(usda):
@@ -216,12 +235,12 @@ def test_manual_mode_end_to_end(usda, lang):
         at.button(key="meal_0_manual_add").click().run()
         assert not at.exception, at.exception
 
-        assert at.metric[0].value == "330 kcal"  # 165 kcal/100 g * 200 g
+        assert summary_kcal(at) == "330 kcal"  # 165 kcal/100 g * 200 g
         assert at.get("download_button")
         assert llm.calls == 0
 
         at.button(key="meal_0_manual_rm_0").click().run()
-        assert not at.metric
+        assert not summary(at)
 
 
 def test_targets_default_to_neutral_values_and_persist_in_the_url(usda):
@@ -318,15 +337,18 @@ def test_extras_count_in_totals_and_progress_bars(usda):
         assert not at.exception, at.exception
 
         assert llm.calls == 2  # the breakfast and the extras
-        assert [h.value for h in at.subheader] == ["Breakfast", "Daily extras"]
-        assert at.metric[0].value == "479 kcal"  # eggs + toast + rice
-        assert at.metric[0].delta == f"{479 - 2000} kcal"
-        assert len(at.get("progress")) == 4
+        html = summary(at)
+        assert summary_kcal(at) == "479 kcal"  # eggs + toast + rice
+        assert f"{2000 - 479} kcal left" in html
+        assert html.count('class="np-card') == 4
+        # One chip per non-empty meal, extras included.
+        assert "🍳 Breakfast <b>284 kcal</b>" in html
+        assert "➕ Daily extras <b>195 kcal</b>" in html
         assert len(at.get("download_button")) == 2
         assert any("not medical" in c.value for c in at.caption)
         assert [tab.label for tab in at.tabs] == [
-            "Meal 1",
+            "🍳 Breakfast",
             "Meal 2",
             "Meal 3",
-            "Daily extras",
+            "➕ Daily extras",
         ]

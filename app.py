@@ -52,6 +52,35 @@ PERSISTED = {
     "gkg": (float, 1.6, 0.5, 3.0, None),
 }
 ITEM_COLUMNS = [3, 4, 1.3, 1, 1, 1, 1]  # text, match, grams, kcal, carbs, protein, fat
+MEAL_ICONS = {
+    "breakfast": "🍳",
+    "lunch": "🥗",
+    "snack": "🍎",
+    "dinner": "🍽️",
+    EXTRAS_ID: "➕",
+}
+OVER_COLOR = "#e0a044"  # amber for the part of a bar past its target
+
+# Styles of the summary strip (macro cards + per-meal chips). Colors come from
+# the theme so the strip follows .streamlit/config.toml and dark mode.
+SUMMARY_CSS = """<style>
+.np-summary{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:.75rem;margin:.25rem 0 .6rem}}
+.np-card{{background:{surface};border-radius:.6rem;padding:.65rem .9rem .8rem}}
+.np-head{{display:flex;justify-content:space-between;gap:.5rem;font-size:.78rem;opacity:.75}}
+.np-note{{font-weight:600;white-space:nowrap}}
+.np-over .np-note{{color:{over};opacity:1}}
+.np-ok .np-note{{color:{primary};opacity:1}}
+.np-value{{font-size:1.45rem;font-weight:650;line-height:1.3;margin:.1rem 0 .45rem}}
+.np-target{{font-size:.85rem;font-weight:400;opacity:.65}}
+.np-track{{position:relative;height:8px;border-radius:4px;background:rgba(128,128,128,.22);
+  overflow:hidden}}
+.np-fill{{position:absolute;left:0;top:0;bottom:0;background:{primary};border-radius:4px}}
+.np-overfill{{position:absolute;top:0;bottom:0;background:{over}}}
+.np-marker{{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:{text};opacity:.55}}
+.np-meals{{display:flex;flex-wrap:wrap;gap:.3rem 1.2rem;font-size:.85rem;opacity:.85;
+  margin-bottom:.75rem}}
+</style>"""
 
 
 # ----------------------------------------------------------------- helpers --
@@ -306,38 +335,85 @@ def render_manual_meal(meal_id: str, usda: UsdaClient, lang: str) -> list[FoodIt
     return foods
 
 
-def render_totals(
+def theme_colors() -> dict[str, str]:
+    """Theme colors from config.toml for the current (light/dark) theme."""
+    dark = st.context.theme.type == "dark"
+
+    def option(name: str, fallback: str) -> str:
+        value = st.get_option(f"theme.dark.{name}") if dark else None
+        return value or st.get_option(f"theme.{name}") or fallback
+
+    return {
+        "primary": option("primaryColor", "#3f7d4e"),
+        "surface": option("secondaryBackgroundColor", "#f1efe7"),
+        "text": option("textColor", "#24302a"),
+        "over": OVER_COLOR,
+    }
+
+
+def macro_card(macro: str, total: float, target: float, lang: str) -> str:
+    """One summary card: value / target, a bar with a target marker, and the
+    amount left or over. The bar keeps growing past the target (in amber)."""
+    unit = "kcal" if macro == "kcal" else "g"
+    diff = total - target
+    span = max(total, target, 1.0)
+    fill = min(total, target) / span * 100
+    over = max(diff, 0.0) / span * 100
+    marker = target / span * 100
+    if target > 0 and abs(diff) <= 0.05 * target:
+        state, note = "ok", t("on_target", lang)
+    elif diff > 0:
+        state, note = "over", t("over", lang).format(diff=round(diff), unit=unit)
+    else:
+        state, note = "under", t("left", lang).format(diff=round(-diff), unit=unit)
+    return (
+        f'<div class="np-card np-{state}">'
+        f'<div class="np-head"><span>{t(macro, lang)}</span>'
+        f'<span class="np-note">{note}</span></div>'
+        f'<div class="np-value">{round(total)}'
+        f'<span class="np-target"> / {round(target)} {unit}</span></div>'
+        f'<div class="np-track"><div class="np-fill" style="width:{fill:.1f}%"></div>'
+        f'<div class="np-overfill" style="left:{marker:.1f}%;width:{over:.1f}%"></div>'
+        f'<div class="np-marker" style="left:{marker:.1f}%"></div></div>'
+        "</div>"
+    )
+
+
+def render_summary(
+    container,
+    meals: list[Meal],
+    labels: dict[str, str],
+    targets: DailyTargets,
+    lang: str,
+) -> None:
+    """Daily totals vs targets, drawn into a container placed above the meals."""
+    shown = [meal for meal in meals if not meal.is_empty]
+    if not shown:
+        return
+    totals = daily_totals(shown)
+    cards = "".join(
+        macro_card(m, totals[m], getattr(targets, m), lang) for m in TARGET_MACROS
+    )
+    chips = "".join(
+        f"<span>{MEAL_ICONS[meal.kind]} {labels[meal.id]} "
+        f'<b>{round(meal_totals(meal)["kcal"])} kcal</b></span>'
+        for meal in shown
+    )
+    with container:
+        st.subheader(t("summary_title", lang))
+        st.markdown(
+            SUMMARY_CSS.format(**theme_colors())
+            + f'<div class="np-summary">{cards}</div><div class="np-meals">{chips}</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def render_downloads(
     meals: list[Meal], labels: dict[str, str], targets: DailyTargets, lang: str
 ) -> None:
     shown = [meal for meal in meals if not meal.is_empty]
     if not shown:
         return
-
-    st.markdown("---")
-    totals = daily_totals(shown)
-    diff = diff_vs_targets(totals, targets)
-    for col, m in zip(st.columns(4), TARGET_MACROS):
-        unit = "kcal" if m == "kcal" else "g"
-        col.metric(
-            f"{t('total', lang)} {t(m, lang)}",
-            f"{round(totals[m])} {unit}",
-            f"{round(diff[m])} {unit}",
-            delta_color="normal",
-        )
-    for m in TARGET_MACROS:
-        target = getattr(targets, m)
-        ratio = min(totals[m] / target, 1.0) if target > 0 else 0.0
-        st.progress(
-            ratio,
-            text=t("progress", lang).format(
-                macro=t(m, lang),
-                total=round(totals[m]),
-                target=round(target),
-                unit="kcal" if m == "kcal" else "g",
-                diff=round(diff[m]),
-            ),
-        )
-
     left, right = st.columns(2)
     left.download_button(
         t("download", lang),
@@ -370,7 +446,7 @@ def meal_total_line(meal: Meal, lang: str) -> None:
 
 st.set_page_config(
     page_title="Nutrition Plan",
-    page_icon="🦖",
+    page_icon="🍽️",
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -423,8 +499,8 @@ chain = ProviderChain(
 )
 client = HybridClient(MealParser(chain), usda, k=int(setting("USDA_CANDIDATES")))
 
-st.columns(3)[1].markdown(f"# {t('app_title', lang)}")
-st.markdown(f"---\n## {t('daily_macros', lang)}")
+st.title(f"🍽️ {t('app_title', lang)}")
+st.header(t("daily_macros", lang))
 
 # ---- targets ----
 st.selectbox(
@@ -487,8 +563,11 @@ if kcal_mismatch(targets) > 0.05:
     )
 sync_to_url()
 
+# The daily summary is filled in once the meals below are known.
+summary_slot = st.container()
+
 # ---- menu: one tab per meal, plus the daily extras ----
-st.markdown(f"## {t('menu', lang)}")
+st.header(t("menu", lang))
 nb_meals = st.number_input(
     t("nb_meals", lang), min_value=1, step=1, value=3, key="nb_meals"
 )
@@ -496,8 +575,24 @@ manual_mode = st.session_state["manual_mode"]
 empty_rows = pd.DataFrame({"ingredient": [""] * EDITOR_ROWS})
 
 meal_ids = [f"meal_{i}" for i in range(nb_meals)]
+# Tab labels come from the kind selectboxes' state (set on a previous run):
+# "🥗 Lunch 2" once a kind is chosen, "Meal 2" until then.
+known_kinds = [
+    Meal(id=meal_id, kind=st.session_state[f"{meal_id}_kind"])
+    for meal_id in meal_ids
+    if st.session_state.get(f"{meal_id}_kind")
+]
+known_numbers = meal_numbers(known_kinds)
+known_labels = {
+    meal.id: f"{MEAL_ICONS[meal.kind]} {meal_label(meal, known_numbers[meal.id], lang)}"
+    for meal in known_kinds
+}
 tabs = st.tabs(
-    [t("meal_tab", lang).format(n=i + 1) for i in range(nb_meals)] + [t("extras", lang)]
+    [
+        known_labels.get(meal_id, t("meal_tab", lang).format(n=i + 1))
+        for i, meal_id in enumerate(meal_ids)
+    ]
+    + [f"{MEAL_ICONS[EXTRAS_ID]} {t('extras', lang)}"]
 )
 
 # Pass 1: kinds and inputs. Meals without a kind are skipped; extras always count.
@@ -557,7 +652,6 @@ meals: list[Meal] = []
 if manual_mode:
     for meal_id, kind in meal_kinds:
         with tab_of[meal_id]:
-            st.subheader(labels[meal_id])
             foods = render_manual_meal(meal_id, usda, lang)
             meal = Meal(id=meal_id, kind=kind, items=foods)
             if foods:
@@ -579,7 +673,6 @@ else:
         if resolved is None:
             continue
         with tab_of[meal_id]:
-            st.subheader(labels[meal_id])
             if not resolved.items:
                 st.warning(t("parse_failed_meal", lang))
             foods = render_resolved_meal(meal_id, resolved, usda, lang)
@@ -588,7 +681,7 @@ else:
                 meal_total_line(meal, lang)
             meals.append(meal)
 
-    if st.button(t("compute", lang), key="compute", width="stretch"):
+    if st.button(t("compute", lang), key="compute", type="primary", width="stretch"):
         max_chars, max_rows = int(setting("MAX_ROW_CHARS")), int(
             setting("MAX_ROWS_PER_MEAL")
         )
@@ -628,8 +721,9 @@ else:
             finally:
                 st.session_state["llm_calls"] = llm_calls_used + chain.calls
 
-render_totals(meals, labels, targets, lang)
+render_summary(summary_slot, meals, labels, targets, lang)
+render_downloads(meals, labels, targets, lang)
 
-st.markdown("---")
+st.divider()
 st.caption(t("footer", lang))
 st.caption(t("disclaimer", lang))

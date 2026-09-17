@@ -3,5 +3,6 @@ Pipfile.lock
 default.json
 __pycache__/
 .streamlit/*
+!.streamlit/config.toml
 .venv/
 .pytest_cache/

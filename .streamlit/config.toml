@@ -1,0 +1,30 @@
+# Theme. Secrets live in .streamlit/secrets.toml (git-ignored).
+
+[theme]
+base = "light"
+primaryColor = "#3f7d4e"
+backgroundColor = "#fbfaf6"
+secondaryBackgroundColor = "#f1efe7"
+textColor = "#24302a"
+borderColor = "#e2ded2"
+linkColor = "#2f6a3f"
+baseRadius = "0.6rem"
+buttonRadius = "0.6rem"
+showWidgetBorder = true
+
+[theme.dark]
+primaryColor = "#4a9a5e"
+backgroundColor = "#141816"
+secondaryBackgroundColor = "#1e2421"
+textColor = "#e8ebe6"
+borderColor = "#2e352f"
+linkColor = "#8fcf9f"
+
+[theme.sidebar]
+backgroundColor = "#f1efe7"
+
+[theme.dark.sidebar]
+backgroundColor = "#1a1f1c"
+
+[browser]
+gatherUsageStats = false

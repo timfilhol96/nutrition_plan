@@ -3,11 +3,11 @@ LANGUAGES = ("en", "fr")
 STRINGS = {
     "en": {
         "language": "English 🇬🇧",
-        "app_title": "NUTRITION PLAN",
+        "app_title": "Nutrition plan",
         "sidebar": """
-# MACROS CALCULATOR
+# Macros calculator
 ---
-## TUTORIAL
+## Tutorial
 - Enter your daily kcal and macros intake
 - Create your daily meals by listing all the ingredients and quantities using natural language
 - Generate your macros
@@ -59,7 +59,7 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "OpenRouter as fallback) for parsing only. Nutrition data comes from "
             "USDA FoodData Central."
         ),
-        "daily_macros": "DAILY MACROS",
+        "daily_macros": "Daily targets",
         "plan": "Choose a calorie plan:",
         "plan_maintenance": "Maintenance",
         "plan_cut": "Cut",
@@ -68,7 +68,7 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "target_carbs": "Daily carbohydrates (g)",
         "target_protein": "Daily proteins (g)",
         "target_fat": "Daily fats (g)",
-        "menu": "MENU",
+        "menu": "Menu",
         "nb_meals": "Select number of daily meals:",
         "meal_kind": "Meal type",
         "meal_kind_placeholder": "Select meal type...",
@@ -84,15 +84,15 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "protein": "Proteins",
         "fat": "Fats",
         "fiber": "Fiber",
-        "compute": "GET MACROS",
+        "compute": "Get macros",
         "fill_one_table": "Please fill in at least 1 table 🦖",
         "no_match": "No match found for '{text}', skipping it.",
         "total": "Total",
         "target": "Ideal",
         "diff": "Diff",
         "summary": "Summary",
-        "download": "DOWNLOAD MENU",
-        "download_long": "DOWNLOAD DETAILED CSV",
+        "download": "Download menu (CSV)",
+        "download_long": "Download detailed CSV",
         "meal_tab": "Meal {n}",
         "extras": "Daily extras",
         "extras_help": "Anything eaten outside meals: supplements, a protein scoop, a snack bar…",
@@ -120,16 +120,19 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "Your macros add up to {atwater} kcal (4·carbs + 4·protein + 9·fat), "
             "which differs from the {kcal} kcal target by more than 5%."
         ),
-        "progress": "{macro}: {total} / {target} {unit} ({diff:+d})",
+        "summary_title": "Today vs. targets",
+        "left": "{diff} {unit} left",
+        "over": "{diff} {unit} over",
+        "on_target": "on target",
         "disclaimer": "Estimates only, not medical or dietary advice.",
     },
     "fr": {
         "language": "Français 🇫🇷",
-        "app_title": "PLAN NUTRITIONNEL",
+        "app_title": "Plan nutritionnel",
         "sidebar": """
-# CALCULATEUR DE MACROS
+# Calculateur de macros
 ---
-## TUTORIEL
+## Tutoriel
 - Entrez vos calories et macros quotidiens
 - Créez vos repas en listant les ingrédients et quantités
 - Générez vos macros
@@ -181,7 +184,7 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "puis OpenRouter en secours) uniquement pour l'analyse. Les données "
             "nutritionnelles proviennent de USDA FoodData Central."
         ),
-        "daily_macros": "MACROS JOURNALIERS",
+        "daily_macros": "Objectifs journaliers",
         "plan": "Choisissez un plan calorique :",
         "plan_maintenance": "Maintenance",
         "plan_cut": "Sèche",
@@ -190,7 +193,7 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "target_carbs": "Glucides journaliers (g)",
         "target_protein": "Protéines journalières (g)",
         "target_fat": "Lipides journaliers (g)",
-        "menu": "MENU",
+        "menu": "Menu",
         "nb_meals": "Sélectionnez le nombre de repas quotidiens :",
         "meal_kind": "Type de repas",
         "meal_kind_placeholder": "Sélectionnez le type de repas...",
@@ -206,15 +209,15 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "protein": "Protéines",
         "fat": "Lipides",
         "fiber": "Fibres",
-        "compute": "OBTENEZ VOS MACROS",
+        "compute": "Obtenir mes macros",
         "fill_one_table": "Veuillez remplir au moins 1 tableau 🦖",
         "no_match": "Aucun résultat pour '{text}', ingrédient ignoré.",
         "total": "Total",
         "target": "Idéal",
         "diff": "Écart",
         "summary": "Résumé",
-        "download": "TÉLÉCHARGEZ VOTRE MENU",
-        "download_long": "TÉLÉCHARGER LE CSV DÉTAILLÉ",
+        "download": "Télécharger le menu (CSV)",
+        "download_long": "Télécharger le CSV détaillé",
         "meal_tab": "Repas {n}",
         "extras": "Extras de la journée",
         "extras_help": "Tout ce qui est pris hors repas : compléments, dose de protéines, barre…",
@@ -242,7 +245,10 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "Vos macros totalisent {atwater} kcal (4·glucides + 4·protéines + 9·lipides), "
             "soit plus de 5 % d'écart avec l'objectif de {kcal} kcal."
         ),
-        "progress": "{macro} : {total} / {target} {unit} ({diff:+d})",
+        "summary_title": "Aujourd'hui vs. objectifs",
+        "left": "{diff} {unit} restants",
+        "over": "{diff} {unit} en trop",
+        "on_target": "objectif atteint",
         "disclaimer": "Estimations uniquement, pas un avis médical ni diététique.",
     },
 }
