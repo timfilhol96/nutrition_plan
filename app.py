@@ -498,7 +498,7 @@ def render_downloads(
 
 st.set_page_config(
     page_title="Nutrition Plan",
-    page_icon="🦖",
+    page_icon="🍽️",
     layout="wide",
     initial_sidebar_state="auto",
 )
@@ -544,7 +544,7 @@ with st.sidebar:
     st.divider()
     st.markdown(t("credits", lang))
 
-st.title(f"🦖 {t('app_title', lang)}")
+st.title(f"🍽️ {t('app_title', lang)}")
 with st.expander(t("how_it_works", lang), icon=":material/help:"):
     st.markdown(t("tutorial", lang))
 
