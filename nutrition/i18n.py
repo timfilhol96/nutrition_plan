@@ -4,23 +4,23 @@ STRINGS = {
     "en": {
         "language": "English 🇬🇧",
         "app_title": "Nutrition plan",
-        "sidebar": """
-# Macros calculator
----
-## Tutorial
-- Enter your daily kcal and macros intake
-- Create your daily meals by listing all the ingredients and quantities using natural language
-- Generate your macros
-- Easily adjust the quantities of any ingredient to exactly hit your daily macros
-- Download your menu as a csv file
----
-This app was made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) using [streamlit](https://streamlit.io/) and [USDA FoodData Central](https://fdc.nal.usda.gov/).
-
----
-Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
-
----
+        "how_it_works": "How it works",
+        "tutorial": """
+1. Enter your daily kcal and macros, or estimate them from your body stats.
+   Targets are kept in the URL: bookmark it to get them back.
+2. Describe each meal in plain language, one ingredient per line
+   (*150 g chicken breast*, *1 cup cooked rice*, *a handful of almonds*).
+3. Click **Get macros**: each line is matched to a USDA food and weighed in grams.
+4. Adjust any match or weight; the totals at the top update instantly.
+5. Download your menu as a CSV.
 """,
+        "credits": (
+            "Made by [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) "
+            "with [Streamlit](https://streamlit.io/) and "
+            "[USDA FoodData Central](https://fdc.nal.usda.gov/). "
+            "[Source code](https://github.com/timfilhol96/nutrition_plan)."
+        ),
+        "llm_calls_used": "AI parsing calls this session: {used} / {cap}",
         "missing_secrets": (
             "Missing USDA credentials: set `FDC_API_KEY` in `.streamlit/secrets.toml` "
             "(or the app's secrets on Streamlit Cloud). Get a free key at "
@@ -46,11 +46,16 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "The AI could not read this meal. Search the foods manually below."
         ),
         "usda_error": "USDA FoodData Central is unreachable right now. Please retry.",
-        "not_found": "No USDA match",
+        "not_found": "No USDA match yet: pick one with the edit button",
         "search_food": "Search a USDA food",
         "no_results": "No results",
         "match": "USDA match",
-        "text": "Your text",
+        "edit_match": "Change the USDA match",
+        "search_other": "Not it? Search another USDA food:",
+        "kcal_short": "kcal",
+        "carbs_short": "C",
+        "protein_short": "P",
+        "fat_short": "F",
         "add": "Add",
         "remove": "Remove",
         "meal_total": "Meal total",
@@ -96,7 +101,15 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "meal_tab": "Meal {n}",
         "extras": "Daily extras",
         "extras_help": "Anything eaten outside meals: supplements, a protein scoop, a snack bar…",
-        "tdee_expander": "Estimate my needs (TDEE)",
+        "ingredient_hint": (
+            "One ingredient per line, with its quantity: *150 g chicken breast*, "
+            "*1 cup cooked rice*, *a handful of almonds*…"
+        ),
+        "parsing": "Parsing {n} meal(s)…",
+        "tdee_expander": "Not sure? Estimate your needs from your body stats",
+        "bmr": "Basal metabolic rate",
+        "maintenance": "Maintenance",
+        "estimate_kcal": "With the selected plan",
         "sex": "Sex",
         "male": "Male",
         "female": "Female",
@@ -110,15 +123,14 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "activity_active": "Active (6–7 days/week)",
         "activity_very_active": "Very active (hard daily training)",
         "protein_per_kg": "Protein (g per kg bodyweight)",
-        "tdee_result": (
-            "Mifflin–St Jeor: BMR **{bmr} kcal**, maintenance **{tdee} kcal**. "
-            "With the selected plan: **{kcal} kcal**, {protein} g protein, "
-            "{fat} g fat (30% of kcal), {carbs} g carbohydrates (the rest)."
+        "estimate_macros": (
+            "Mifflin–St Jeor. Macros: {protein} g protein, {fat} g fat "
+            "(30 % of kcal), {carbs} g carbohydrates (the rest)."
         ),
         "use_estimate": "Use this estimate",
         "kcal_mismatch": (
-            "Your macros add up to {atwater} kcal (4·carbs + 4·protein + 9·fat), "
-            "which differs from the {kcal} kcal target by more than 5%."
+            "Your macros add up to {atwater} kcal ({pct:+d} %): "
+            "4·carbs + 4·protein + 9·fat"
         ),
         "summary_title": "Today vs. targets",
         "left": "{diff} {unit} left",
@@ -129,23 +141,23 @@ Source code: [GitHub](https://github.com/timfilhol96/nutrition_plan)
     "fr": {
         "language": "Français 🇫🇷",
         "app_title": "Plan nutritionnel",
-        "sidebar": """
-# Calculateur de macros
----
-## Tutoriel
-- Entrez vos calories et macros quotidiens
-- Créez vos repas en listant les ingrédients et quantités
-- Générez vos macros
-- Ajustez facilement les quantités pour arriver à vos objectifs
-- Téléchargez votre menu
----
-Cette application a été créée par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) grâce à [streamlit](https://streamlit.io/) et [USDA FoodData Central](https://fdc.nal.usda.gov/).
-
----
-Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
-
----
+        "how_it_works": "Comment ça marche",
+        "tutorial": """
+1. Entrez vos calories et macros quotidiens, ou estimez-les à partir de vos mensurations.
+   Les objectifs sont conservés dans l'URL : mettez-la en favori pour les retrouver.
+2. Décrivez chaque repas en langage courant, un ingrédient par ligne
+   (*150 g de blanc de poulet*, *1 bol de riz cuit*, *une poignée d'amandes*).
+3. Cliquez sur **Obtenir mes macros** : chaque ligne est associée à un aliment USDA et pesée en grammes.
+4. Ajustez n'importe quelle correspondance ou quantité ; les totaux en haut se mettent à jour instantanément.
+5. Téléchargez votre menu en CSV.
 """,
+        "credits": (
+            "Créé par [Timothée Filhol](https://www.linkedin.com/in/timothee-filhol) "
+            "avec [Streamlit](https://streamlit.io/) et "
+            "[USDA FoodData Central](https://fdc.nal.usda.gov/). "
+            "[Code source](https://github.com/timfilhol96/nutrition_plan)."
+        ),
+        "llm_calls_used": "Analyses par IA cette session : {used} / {cap}",
         "missing_secrets": (
             "Identifiant USDA manquant : définissez `FDC_API_KEY` dans "
             "`.streamlit/secrets.toml` (ou dans les secrets de l'application sur "
@@ -171,11 +183,16 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
             "L'IA n'a pas pu lire ce repas. Cherchez les aliments manuellement ci-dessous."
         ),
         "usda_error": "USDA FoodData Central est injoignable pour le moment. Réessayez.",
-        "not_found": "Aucune correspondance USDA",
+        "not_found": "Pas encore de correspondance USDA : choisissez-en une avec le bouton modifier",
         "search_food": "Chercher un aliment USDA",
         "no_results": "Aucun résultat",
         "match": "Correspondance USDA",
-        "text": "Votre texte",
+        "edit_match": "Changer la correspondance USDA",
+        "search_other": "Pas le bon ? Cherchez un autre aliment USDA :",
+        "kcal_short": "kcal",
+        "carbs_short": "G",
+        "protein_short": "P",
+        "fat_short": "L",
         "add": "Ajouter",
         "remove": "Retirer",
         "meal_total": "Total du repas",
@@ -221,7 +238,15 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "meal_tab": "Repas {n}",
         "extras": "Extras de la journée",
         "extras_help": "Tout ce qui est pris hors repas : compléments, dose de protéines, barre…",
-        "tdee_expander": "Estimer mes besoins (TDEE)",
+        "ingredient_hint": (
+            "Un ingrédient par ligne, avec sa quantité : *150 g de blanc de poulet*, "
+            "*1 bol de riz cuit*, *une poignée d'amandes*…"
+        ),
+        "parsing": "Analyse de {n} repas…",
+        "tdee_expander": "Pas sûr ? Estimez vos besoins à partir de vos mensurations",
+        "bmr": "Métabolisme de base",
+        "maintenance": "Maintenance",
+        "estimate_kcal": "Avec le plan choisi",
         "sex": "Sexe",
         "male": "Homme",
         "female": "Femme",
@@ -235,15 +260,14 @@ Code source : [GitHub](https://github.com/timfilhol96/nutrition_plan)
         "activity_active": "Actif (6 à 7 jours/semaine)",
         "activity_very_active": "Très actif (entraînement intense quotidien)",
         "protein_per_kg": "Protéines (g par kg de poids)",
-        "tdee_result": (
-            "Mifflin–St Jeor : métabolisme de base **{bmr} kcal**, maintenance "
-            "**{tdee} kcal**. Avec le plan choisi : **{kcal} kcal**, {protein} g de "
-            "protéines, {fat} g de lipides (30 % des kcal), {carbs} g de glucides (le reste)."
+        "estimate_macros": (
+            "Mifflin–St Jeor. Macros : {protein} g de protéines, {fat} g de lipides "
+            "(30 % des kcal), {carbs} g de glucides (le reste)."
         ),
         "use_estimate": "Utiliser cette estimation",
         "kcal_mismatch": (
-            "Vos macros totalisent {atwater} kcal (4·glucides + 4·protéines + 9·lipides), "
-            "soit plus de 5 % d'écart avec l'objectif de {kcal} kcal."
+            "Vos macros totalisent {atwater} kcal ({pct:+d} %) : "
+            "4·glucides + 4·protéines + 9·lipides"
         ),
         "summary_title": "Aujourd'hui vs. objectifs",
         "left": "{diff} {unit} restants",

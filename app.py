@@ -3,7 +3,7 @@ import streamlit as st
 
 from nutrition.config import secret, setting
 from nutrition.export import build_csv, build_long_csv
-from nutrition.hybrid import HybridClient, ResolvedMeal
+from nutrition.hybrid import HybridClient, ResolvedItem, ResolvedMeal
 from nutrition.i18n import LANGUAGES, t
 from nutrition.llm import (
     LLMBudgetExhausted,
@@ -51,7 +51,8 @@ PERSISTED = {
     "activity": (str, "moderate", None, None, tuple(ACTIVITY_MULTIPLIERS)),
     "gkg": (float, 1.6, 0.5, 3.0, None),
 }
-ITEM_COLUMNS = [3, 4, 1.3, 1, 1, 1, 1]  # text, match, grams, kcal, carbs, protein, fat
+# food, edit, grams, kcal, carbs, protein, fat, remove
+ITEM_COLUMNS = [5, 0.7, 1.3, 1, 1, 1, 1, 0.6]
 MEAL_ICONS = {
     "breakfast": "🍳",
     "lunch": "🥗",
@@ -60,6 +61,10 @@ MEAL_ICONS = {
     EXTRAS_ID: "➕",
 }
 OVER_COLOR = "#e0a044"  # amber for the part of a bar past its target
+
+# The match popover holds USDA descriptions, which need more room than the
+# narrow column its button sits in.
+PAGE_CSS = "<style>[data-testid=stPopoverBody]{min-width:min(34rem,92vw)}</style>"
 
 # Styles of the summary strip (macro cards + per-meal chips). Colors come from
 # the theme so the strip follows .streamlit/config.toml and dark mode.
@@ -156,6 +161,9 @@ def set_targets(targets: DailyTargets) -> None:
 def on_plan_change() -> None:
     """Shift kcal (and carbs by kcal/4) by the difference between the two plans."""
     old, new = st.session_state["plan_applied"], st.session_state["plan"]
+    if new is None:  # the segmented control was deselected: keep the plan
+        st.session_state["plan"] = old
+        return
     set_targets(shift_plan(current_targets(), old, new))
     st.session_state["plan_applied"] = new
 
@@ -202,7 +210,10 @@ def usda_search_widget(
 ) -> UsdaCandidate | None:
     """Text search over USDA foods (cached) + a selectbox of the candidates."""
     query = container.text_input(
-        t("search_food", lang), value=default, key=f"{key}_q", placeholder="🔍"
+        t("search_food", lang),
+        value=default,
+        key=f"{key}_q",
+        icon=":material/search:",
     )
     if not query.strip():
         return None
@@ -225,114 +236,164 @@ def usda_search_widget(
     return by_id[chosen]
 
 
+def num_cell(col, value: float | None, bold: bool = False) -> None:
+    text = "" if value is None else f"{round(value)}"
+    col.markdown(f"**{text}**" if bold and text else text, text_alignment="right")
+
+
 def macro_cells(cols, food: FoodItem | None) -> None:
     for col, macro in zip(cols, TARGET_MACROS):
-        col.write("" if food is None else f"{round(getattr(food, macro))}")
+        num_cell(col, None if food is None else getattr(food, macro))
 
 
 def item_header(lang: str) -> None:
-    cols = st.columns(ITEM_COLUMNS)
-    labels = [t("text", lang), t("match", lang), t("grams", lang)] + [
-        t(m, lang) for m in TARGET_MACROS
-    ]
-    for col, label in zip(cols, labels):
-        col.caption(label)
+    cols = st.columns(ITEM_COLUMNS, vertical_alignment="bottom")
+    cols[0].caption(t("food", lang))
+    cols[2].caption(t("grams", lang))
+    for col, macro in zip(cols[3:7], TARGET_MACROS):
+        col.caption(
+            t(f"{macro}_short", lang), help=t(macro, lang), text_alignment="right"
+        )
+
+
+def grams_input(col, key: str, default: float, lang: str) -> float:
+    return col.number_input(
+        t("grams", lang),
+        min_value=0.0,
+        value=default,
+        step=5.0,
+        format="%g",
+        key=key,
+        label_visibility="collapsed",
+    )
+
+
+def remove_button(col, key: str, lang: str) -> bool:
+    return col.button(
+        "", icon=":material/delete:", key=key, type="tertiary", help=t("remove", lang)
+    )
+
+
+def match_editor(
+    key: str, item: ResolvedItem | None, usda: UsdaClient, lang: str
+) -> UsdaCandidate | None:
+    """Popover body: the parser's candidates (when it found some), then a
+    USDA search for anything else. A search result wins over the candidates."""
+    chosen = None
+    if item is not None and item.found:
+        by_id = {c.fdc_id: c for c in item.candidates}
+        fdc_id = st.selectbox(
+            t("match", lang),
+            list(by_id),
+            format_func=lambda fdc_id, by_id=by_id: by_id[fdc_id].description,
+            key=f"{key}_match",
+        )
+        chosen = by_id[fdc_id]
+        st.caption(t("search_other", lang))
+    default = "" if chosen or item is None else item.name_en
+    other = usda_search_widget(st, key, usda, lang, default=default)
+    return other or chosen
 
 
 def render_resolved_meal(
     meal_id: str, resolved: ResolvedMeal, usda: UsdaClient, lang: str
 ) -> list[FoodItem]:
-    """Free-text results: editable match + grams per item. Recomputes locally."""
+    """Free-text results: one row per item with an editable match (popover)
+    and grams. Everything recomputes locally, without the LLM."""
     item_header(lang)
+    rows: list[tuple[str, str, ResolvedItem | None]] = [
+        (f"{meal_id}_ov_r{item.row}_i{index}", item.text, item)
+        for index, item in enumerate(resolved.items)
+    ]
+    rows += [
+        (f"{meal_id}_ov_r{row}_failed", text, None)
+        for row, text in resolved.failed_rows
+    ]
     foods = []
-    for index, item in enumerate(resolved.items):
-        key = f"{meal_id}_ov_r{item.row}_i{index}"
-        cols = st.columns(ITEM_COLUMNS)
-        cols[0].write(item.text)
-        if item.found:
-            by_id = {c.fdc_id: c for c in item.candidates}
-            chosen = cols[1].selectbox(
-                t("match", lang),
-                list(by_id),
-                format_func=lambda fdc_id, by_id=by_id: by_id[fdc_id].description,
-                key=f"{key}_match",
-                label_visibility="collapsed",
-            )
-            candidate = by_id[chosen]
-        else:
-            cols[1].caption(t("not_found", lang))
-            candidate = usda_search_widget(
-                cols[1], key, usda, lang, default=item.name_en
-            )
-        grams = cols[2].number_input(
-            t("grams", lang),
-            min_value=0.0,
-            value=float(item.grams),
-            step=5.0,
-            key=f"{key}_grams",
-            label_visibility="collapsed",
-        )
-        food = candidate.scaled(grams, source=item.text) if candidate else None
-        macro_cells(cols[3:], food)
-        if item.assumption:
-            cols[0].caption(f"↳ {item.assumption}")
-        if food:
-            foods.append(food)
-
-    for row, text in resolved.failed_rows:
-        key = f"{meal_id}_ov_r{row}_failed"
-        cols = st.columns(ITEM_COLUMNS)
-        cols[0].write(text)
-        cols[0].caption(f"↳ {t('not_found', lang)}")
-        candidate = usda_search_widget(cols[1], key, usda, lang)
-        grams = cols[2].number_input(
-            t("grams", lang),
-            min_value=0.0,
-            value=100.0,
-            step=5.0,
-            key=f"{key}_grams",
-            label_visibility="collapsed",
+    for key, text, item in rows:
+        if st.session_state.get(f"{key}_removed"):
+            continue
+        cols = st.columns(ITEM_COLUMNS, vertical_alignment="center")
+        with cols[1].popover(
+            "",
+            icon=":material/edit:",
+            help=t("edit_match", lang),
+            width="stretch",
+            # A row without a match needs the user's attention.
+            type="secondary" if item is not None and item.found else "primary",
+        ):
+            candidate = match_editor(key, item, usda, lang)
+        grams = grams_input(
+            cols[2], f"{key}_grams", float(item.grams) if item else 100.0, lang
         )
         food = candidate.scaled(grams, source=text) if candidate else None
-        macro_cells(cols[3:], food)
+
+        cols[0].markdown(text)
+        note = (
+            f"↳ {candidate.description}"
+            if candidate
+            else f":orange[↳ {t('not_found', lang)}]"
+        )
+        if item is not None and item.assumption:
+            note += f" · _{item.assumption}_"
+        cols[0].caption(note)
+        macro_cells(cols[3:7], food)
+        if remove_button(cols[7], f"{key}_rm", lang):
+            st.session_state[f"{key}_removed"] = True
+            st.rerun()
         if food:
             foods.append(food)
     return foods
 
 
 def render_manual_meal(meal_id: str, usda: UsdaClient, lang: str) -> list[FoodItem]:
-    """Manual mode: search a food, enter grams, add it to the meal."""
+    """Manual mode: search a food, enter grams, add it to the meal. Rows keep
+    a unique id so their grams widgets survive removals above them."""
     items = st.session_state.setdefault("manual_items", {}).setdefault(meal_id, [])
-    cols = st.columns([7, 1.3, 1.2])
+    cols = st.columns([7, 1.3, 1.2], vertical_alignment="bottom")
     candidate = usda_search_widget(cols[0], f"{meal_id}_manual", usda, lang)
     grams = cols[1].number_input(
         t("grams", lang),
         min_value=0.0,
         value=100.0,
         step=5.0,
+        format="%g",
         key=f"{meal_id}_manual_grams",
     )
     if cols[2].button(
-        t("add", lang), key=f"{meal_id}_manual_add", disabled=candidate is None
+        t("add", lang),
+        key=f"{meal_id}_manual_add",
+        disabled=candidate is None,
+        width="stretch",
     ):
-        items.append((candidate, grams))
+        uid = st.session_state.get("manual_seq", 0)
+        st.session_state["manual_seq"] = uid + 1
+        items.append((uid, candidate, grams))
         st.rerun()
 
     foods = []
     if items:
         item_header(lang)
-    for index, (candidate, grams) in enumerate(items):
-        cols = st.columns(ITEM_COLUMNS)
+    for index, (uid, candidate, grams) in enumerate(items):
+        cols = st.columns(ITEM_COLUMNS, vertical_alignment="center")
+        cols[0].markdown(candidate.description)
+        grams = grams_input(cols[2], f"{meal_id}_manual_g_{uid}", float(grams), lang)
+        items[index] = (uid, candidate, grams)
         food = candidate.scaled(grams, source=candidate.description)
-        cols[0].write(candidate.description)
-        cols[1].write("")
-        cols[2].write(f"{grams:g} g")
-        macro_cells(cols[3:], food)
-        if cols[1].button(t("remove", lang), key=f"{meal_id}_manual_rm_{index}"):
+        macro_cells(cols[3:7], food)
+        if remove_button(cols[7], f"{meal_id}_manual_rm_{uid}", lang):
             items.pop(index)
             st.rerun()
         foods.append(food)
     return foods
+
+
+def meal_total_row(meal: Meal, lang: str) -> None:
+    cols = st.columns(ITEM_COLUMNS, vertical_alignment="center")
+    cols[0].markdown(f"**{t('meal_total', lang)}**")
+    totals = meal_totals(meal)
+    for col, macro in zip(cols[3:7], TARGET_MACROS):
+        num_cell(col, totals[macro], bold=True)
 
 
 def theme_colors() -> dict[str, str]:
@@ -433,24 +494,16 @@ def render_downloads(
     )
 
 
-def meal_total_line(meal: Meal, lang: str) -> None:
-    totals = meal_totals(meal)
-    parts = [
-        f"{round(totals[m])} {'kcal' if m == 'kcal' else 'g ' + t(m, lang)}"
-        for m in MACROS
-    ]
-    st.caption(f"**{t('meal_total', lang)}:** " + " · ".join(parts))
-
-
 # -------------------------------------------------------------------- page --
 
 st.set_page_config(
     page_title="Nutrition Plan",
-    page_icon="🍽️",
+    page_icon="🦖",
     layout="wide",
     initial_sidebar_state="auto",
 )
 restore_from_url()
+st.markdown(PAGE_CSS, unsafe_allow_html=True)
 
 with st.sidebar:
     lang = st.radio(
@@ -458,6 +511,7 @@ with st.sidebar:
         LANGUAGES,
         format_func=lambda code: t("language", code),
         key="lang",
+        horizontal=True,
         label_visibility="collapsed",
     )
 
@@ -475,6 +529,9 @@ auto_message = st.session_state.pop("auto_manual_message", None)
 if auto_message or not llm_configured:
     st.session_state["manual_mode"] = True
 
+cap = int(setting("LLM_SESSION_CAP"))
+llm_calls_used = st.session_state.setdefault("llm_calls", 0)
+
 with st.sidebar:
     st.toggle(
         t("manual_mode", lang),
@@ -482,15 +539,19 @@ with st.sidebar:
         help=t("manual_mode_help", lang),
         disabled=not llm_configured,
     )
-    st.markdown(t("sidebar", lang))
+    if llm_configured:
+        st.caption(t("llm_calls_used", lang).format(used=llm_calls_used, cap=cap))
+    st.divider()
+    st.markdown(t("credits", lang))
+
+st.title(f"🦖 {t('app_title', lang)}")
+with st.expander(t("how_it_works", lang), icon=":material/help:"):
+    st.markdown(t("tutorial", lang))
 
 if auto_message:
     st.info(auto_message)
 elif not llm_configured:
     st.info(t("no_llm_configured", lang))
-
-cap = int(setting("LLM_SESSION_CAP"))
-llm_calls_used = st.session_state.setdefault("llm_calls", 0)
 chain = ProviderChain(
     providers,
     cooldowns=st.session_state.setdefault("provider_cooldowns", {}),
@@ -499,19 +560,34 @@ chain = ProviderChain(
 )
 client = HybridClient(MealParser(chain), usda, k=int(setting("USDA_CANDIDATES")))
 
-st.title(f"🍽️ {t('app_title', lang)}")
-st.header(t("daily_macros", lang))
-
 # ---- targets ----
-st.selectbox(
+st.header(t("daily_macros", lang))
+st.segmented_control(
     t("plan", lang),
     list(CALORIE_PLANS),
     format_func=lambda p: plan_label(p, lang),
     key="plan",
     on_change=on_plan_change,
 )
+target_cols = st.columns(4)
+target_cols[0].number_input(t("target_kcal", lang), min_value=0, step=10, key="kcal")
+target_cols[1].number_input(t("target_carbs", lang), min_value=0, step=5, key="carbs")
+target_cols[2].number_input(
+    t("target_protein", lang), min_value=0, step=5, key="protein"
+)
+target_cols[3].number_input(t("target_fat", lang), min_value=0, step=5, key="fat")
+targets = current_targets()
+if kcal_mismatch(targets) > 0.05:
+    atwater = atwater_kcal(targets.carbs, targets.protein, targets.fat)
+    st.caption(
+        ":orange[:material/warning: "
+        + t("kcal_mismatch", lang).format(
+            atwater=round(atwater), pct=round(100 * (atwater / targets.kcal - 1))
+        )
+        + "]"
+    )
 
-with st.expander(t("tdee_expander", lang)):
+with st.expander(t("tdee_expander", lang), icon=":material/calculate:"):
     cols = st.columns(3)
     cols[0].selectbox(
         t("sex", lang), ["male", "female"], format_func=lambda s: t(s, lang), key="sex"
@@ -525,42 +601,42 @@ with st.expander(t("tdee_expander", lang)):
     )
     cols = st.columns(3)
     cols[0].number_input(
-        t("weight", lang), min_value=30.0, max_value=300.0, step=0.5, key="weight"
+        t("weight", lang),
+        min_value=30.0,
+        max_value=300.0,
+        step=0.5,
+        format="%g",
+        key="weight",
     )
     cols[1].number_input(
-        t("height", lang), min_value=100.0, max_value=250.0, step=1.0, key="height"
+        t("height", lang),
+        min_value=100.0,
+        max_value=250.0,
+        step=1.0,
+        format="%g",
+        key="height",
     )
     cols[2].number_input(
-        t("protein_per_kg", lang), min_value=0.5, max_value=3.0, step=0.1, key="gkg"
+        t("protein_per_kg", lang),
+        min_value=0.5,
+        max_value=3.0,
+        step=0.1,
+        format="%g",
+        key="gkg",
     )
     bmr, maintenance, estimate = estimated_targets()
-    st.markdown(
-        t("tdee_result", lang).format(
-            bmr=round(bmr),
-            tdee=round(maintenance),
-            kcal=round(estimate.kcal),
+    cols = st.columns(3)
+    cols[0].metric(t("bmr", lang), f"{round(bmr)} kcal")
+    cols[1].metric(t("maintenance", lang), f"{round(maintenance)} kcal")
+    cols[2].metric(t("estimate_kcal", lang), f"{round(estimate.kcal)} kcal")
+    st.caption(
+        t("estimate_macros", lang).format(
             protein=round(estimate.protein),
             fat=round(estimate.fat),
             carbs=round(estimate.carbs),
         )
     )
     st.button(t("use_estimate", lang), key="use_estimate", on_click=on_use_estimate)
-
-target_cols = st.columns(4)
-target_cols[0].number_input(t("target_kcal", lang), min_value=0, step=10, key="kcal")
-target_cols[1].number_input(t("target_carbs", lang), min_value=0, step=5, key="carbs")
-target_cols[2].number_input(
-    t("target_protein", lang), min_value=0, step=5, key="protein"
-)
-target_cols[3].number_input(t("target_fat", lang), min_value=0, step=5, key="fat")
-targets = current_targets()
-if kcal_mismatch(targets) > 0.05:
-    st.warning(
-        t("kcal_mismatch", lang).format(
-            atwater=round(atwater_kcal(targets.carbs, targets.protein, targets.fat)),
-            kcal=round(targets.kcal),
-        )
-    )
 sync_to_url()
 
 # The daily summary is filled in once the meals below are known.
@@ -614,6 +690,7 @@ for meal_id, tab in zip(meal_ids, tabs):
         meal_kinds.append((meal_id, kind))
         if manual_mode:
             continue
+        st.caption(t("ingredient_hint", lang))
         edited = st.data_editor(
             empty_rows,
             key=f"{meal_id}_rows",
@@ -629,6 +706,7 @@ with tabs[-1]:
     st.caption(t("extras_help", lang))
     meal_kinds.append((EXTRAS_ID, EXTRAS_ID))
     if not manual_mode:
+        st.caption(t("ingredient_hint", lang))
         edited = st.data_editor(
             empty_rows,
             key=f"{EXTRAS_ID}_rows",
@@ -655,7 +733,7 @@ if manual_mode:
             foods = render_manual_meal(meal_id, usda, lang)
             meal = Meal(id=meal_id, kind=kind, items=foods)
             if foods:
-                meal_total_line(meal, lang)
+                meal_total_row(meal, lang)
             meals.append(meal)
 else:
     # Results live in session state so they survive reruns. They are dropped
@@ -678,7 +756,7 @@ else:
             foods = render_resolved_meal(meal_id, resolved, usda, lang)
             meal = Meal(id=meal_id, kind=kind, items=foods)
             if foods:
-                meal_total_line(meal, lang)
+                meal_total_row(meal, lang)
             meals.append(meal)
 
     if st.button(t("compute", lang), key="compute", type="primary", width="stretch"):
@@ -696,11 +774,12 @@ else:
             st.error(t(key, lang).format(**args))
         else:
             new_results: dict[str, ResolvedMeal] = {}
+            pending = [(m, k, rows) for m, k, rows in meal_inputs if rows]
             try:
-                with st.spinner("⏳"):
-                    for meal_id, kind, rows in meal_inputs:
-                        if not rows:
-                            continue
+                with st.status(
+                    t("parsing", lang).format(n=len(pending)), expanded=True
+                ) as status:
+                    for meal_id, kind, rows in pending:
                         try:
                             new_results[meal_id] = client.resolve_meal(rows, lang)
                         except ParseFailed:
@@ -708,6 +787,8 @@ else:
                                 items=[], failed_rows=list(enumerate(rows, start=1))
                             )
                         clear_overrides(meal_id)
+                        st.write(f":material/check: {labels[meal_id]}")
+                    status.update(state="complete")
                 st.session_state["results"] = new_results
                 st.session_state["results_fingerprint"] = fingerprint
                 st.session_state["llm_calls"] = llm_calls_used + chain.calls

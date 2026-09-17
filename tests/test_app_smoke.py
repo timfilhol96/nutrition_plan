@@ -157,6 +157,19 @@ def test_free_text_mode_end_to_end(usda, lang):
         assert at.session_state["llm_calls"] == 2
         assert at.get("download_button")
 
+        # A search in the popover overrides the parser's candidates:
+        # egg 200 g -> chicken breast 200 g (330). 330 + 87.9 + 195 = 612.9
+        at.text_input(key="meal_0_ov_r1_i0_q").set_value("chicken breast").run()
+        assert not at.exception, at.exception
+        assert at.selectbox(key="meal_0_ov_r1_i0_sel").value == 1004
+        assert summary_kcal(at) == "613 kcal"
+        assert any("Chicken, broilers" in c.value for c in at.caption)
+
+        # Removing a row: the toast goes, 330 + 195 = 525.
+        at.button(key="meal_0_ov_r1_i1_rm").click().run()
+        assert summary_kcal(at) == "525 kcal"
+        assert "meal_0_ov_r1_i1_match" not in {s.key for s in at.selectbox}
+
         # Same rows again: the parse cache answers, the cap is not charged.
         at.button(key="compute").click().run()
         assert llm.calls == 2 and at.session_state["llm_calls"] == 2
@@ -239,6 +252,10 @@ def test_manual_mode_end_to_end(usda, lang):
         assert at.get("download_button")
         assert llm.calls == 0
 
+        # Grams are editable in place.
+        at.number_input(key="meal_0_manual_g_0").set_value(300.0).run()
+        assert summary_kcal(at) == "495 kcal"
+
         at.button(key="meal_0_manual_rm_0").click().run()
         assert not summary(at)
 
@@ -279,7 +296,7 @@ def test_targets_default_to_neutral_values_and_persist_in_the_url(usda):
     assert at.number_input(key="kcal").value == 1800
     assert at.number_input(key="carbs").value == 250  # invalid -> default
     assert at.number_input(key="fat").value == 50
-    assert at.selectbox(key="plan").value == "cut"
+    assert at.segmented_control(key="plan").value == "cut"
     assert at.selectbox(key="sex").value == "female"
     assert at.number_input(key="age").value == 10  # clamped to the minimum
     assert at.number_input(key="weight").value == 60.5
@@ -289,10 +306,10 @@ def test_targets_default_to_neutral_values_and_persist_in_the_url(usda):
 
 def test_plan_change_shifts_kcal_and_carbs(usda):
     at = make_app().run()
-    at.selectbox(key="plan").select("cut").run()
+    at.segmented_control(key="plan").select("cut").run()
     assert at.number_input(key="kcal").value == 1700
     assert at.number_input(key="carbs").value == 175
-    at.selectbox(key="plan").select("extra_cut").run()
+    at.segmented_control(key="plan").select("extra_cut").run()
     assert at.number_input(key="kcal").value == 1500
     assert at.number_input(key="carbs").value == 125
     assert qp(at, "plan") == "extra_cut"
@@ -317,11 +334,15 @@ def test_tdee_estimate_fills_the_targets(usda):
     assert qp(at, "kcal") == str(round(maintenance))
 
 
-def test_kcal_mismatch_warning(usda):
+def test_kcal_mismatch_hint(usda):
+    def hints(at):
+        return [c.value for c in at.caption if "warning" in c.value]
+
     at = make_app().run()
-    assert not any("5%" in w.value or "5 %" in w.value for w in at.warning)
+    assert not hints(at)
     at.number_input(key="fat").set_value(150).run()
-    assert any("kcal" in w.value for w in at.warning)
+    # 4*250 + 4*100 + 9*150 = 2750 kcal, +38 % over the 2000 kcal target
+    assert hints(at) and "2750" in hints(at)[0] and "+38" in hints(at)[0]
 
 
 def test_extras_count_in_totals_and_progress_bars(usda):
